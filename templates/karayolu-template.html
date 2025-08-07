@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karayolu Taşıma Fiyat Teklifi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border: 2px solid #000;
+        }
+
+        .header {
+            background: #fff;
+            text-align: center;
+            padding: 20px;
+            border-bottom: 2px solid #000;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .quote-info {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 20px;
+            background: #f8f8f8;
+            border-bottom: 1px solid #000;
+        }
+
+        .quote-info div {
+            font-size: 12px;
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .greeting {
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .section-title {
+            background: #e0e0e0;
+            padding: 8px 15px;
+            margin: 20px 0 10px 0;
+            font-weight: bold;
+            text-align: center;
+            text-transform: uppercase;
+            font-size: 14px;
+            border: 1px solid #000;
+        }
+
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .info-table td {
+            padding: 8px 15px;
+            border: 1px solid #000;
+            font-size: 12px;
+        }
+
+        .info-table .label {
+            background: #f0f0f0;
+            font-weight: bold;
+            width: 40%;
+        }
+
+        .price-section {
+            background: #fffacd;
+            border: 2px solid #000;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .price-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .price-table td {
+            padding: 5px 10px;
+            border: 1px solid #000;
+            font-size: 12px;
+        }
+
+        .price-table .price-label {
+            background: #f0f0f0;
+            font-weight: bold;
+        }
+
+        .services-list {
+            font-size: 12px;
+            line-height: 1.6;
+            margin: 15px 0;
+        }
+
+        .services-list ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .payment-terms {
+            font-size: 11px;
+            line-height: 1.5;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+
+        .signature-section {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            padding: 20px 0;
+        }
+
+        .signature-box {
+            text-align: center;
+            width: 45%;
+        }
+
+        .signature-line {
+            border-bottom: 1px solid #000;
+            height: 60px;
+            margin-bottom: 10px;
+        }
+
+        .company-stamp {
+            width: 100px;
+            height: 80px;
+            border: 1px solid #000;
+            margin: 0 auto 10px auto;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>EVEYASI TAŞIMA FİYAT TEKLİFİ/SÖZLEŞMESİ</h1>
+        </div>
+
+        <!-- Quote Info -->
+        <div class="quote-info">
+            <div><strong>TEKLİF#:</strong> {quote_number}</div>
+            <div><strong>TARİH:</strong> {quote_date}</div>
+            <div><strong>Teklifin Geçerlilik Süresi:</strong> 15 gün</div>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- Greeting -->
+            <div class="greeting">
+                <strong>Sayın {customer_name},</strong><br>
+                Europatrans Global Lojistik Taşımacılık olarak eşyalarınızın uluslararası taşımasını, aşağıda belirtilen
+                şartlar dahilinde yapmayı teklif ve taahhüt ederiz.
+            </div>
+
+            <!-- Transport Info Section -->
+            <div class="section-title">TAŞIMAYA DAİR GENEL BİLGİLER</div>
+            <table class="info-table">
+                <tr>
+                    <td class="label">Taşıma Modu</td>
+                    <td>Karayolu/Parsiyel/Evden Eve</td>
+                    <td class="label">Yükleme Şehri/Ülke</td>
+                    <td>{origin}</td>
+                </tr>
+                <tr>
+                    <td class="label">Eşyanın Hacmi</td>
+                    <td>{volume} m³</td>
+                    <td class="label">Teslimat Şehri/Ülke</td>
+                    <td>{destination}</td>
+                </tr>
+                <tr>
+                    <td class="label">Yükleme Tarihi</td>
+                    <td>2025 (Gün belirlenecek)</td>
+                    <td class="label">Teslimat Tarihi</td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td class="label">İletişim Bilgisi</td>
+                    <td>-</td>
+                    <td class="label">Transit Süre</td>
+                    <td>Yükleme sonrası ortalama 3-4 hafta</td>
+                </tr>
+            </table>
+
+            <!-- Price Section -->
+            <div class="section-title">TEKLİF FİYATIMIZ ..... EURO</div>
+            <div class="price-section">
+                <table class="price-table">
+                    <tr>
+                        <td class="price-label">Birim m3 fiyatı</td>
+                        <td>: .... Euro</td>
+                    </tr>
+                    <tr>
+                        <td class="price-label">Gümrük Hizmet Bedeli</td>
+                        <td>: +250 Euro (Türkiye ve Almanya gümrük işlemleri için bir defaya mahsus)</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Services Section -->
+            <div class="section-title">FİYATA DAHİL OLAN VE EUROPATRANS TARAFINDAN SAĞLANACAK HİZMETLERİMİZ :</div>
+            <div class="services-list">
+                <strong>*Uygun malzeme ile eşyaların ambalajlanması, paketlenmesi, muhafazaya alınması, mobilyaların
+                    sökümü, evden araca taşınması.</strong><br>
+                <strong>*Eşyanın yüklü ve varış ülkesi gümrük evraklarının düzenlenmesi, süreçlerin takibi,
+                    ihracat-ithalat gümrük işlemlerinin yapılması.</strong><br>
+                <strong>*Aracın mobilyalı ev taşıması.</strong><br>
+                <strong>*Eşyayı araçtan eve taşıma, sökülmüş mobilyaların gösterilen yere kurulumu, kolilerin uygun
+                    odalara bırakılması.</strong><br>
+                <strong>*Ambalaj ve ambalaj açıklarının alınması.</strong><br>
+                <strong>*Nakliye sigortası. (Araç başı 500.000 TL Allianz Sigorta)</strong>
+
+                <div style="margin-top: 20px;">
+                    <strong>FİYAT HARİCİ OPSİYONEL/OLASI HİZMETLER ve ÜCRETLERİ :</strong>
+                    <ul>
+                        <li><strong>*Depolama hizmeti</strong> (Teslimat ev hazır olmaması durumunda, 10 m3 eşya
+                            depolama tutarı Türkiye'de 3.000 TL Almanya'da €200)</li>
+                        <li><strong>*Hızlı taşıma</strong> veya eşya taşıma süreci (Binasının asansörü olmaması
+                            durumunda-kara ve ülleve göre değişir. 1 kat €100-200)</li>
+                        <li><strong>*Gümrüklerde oluşması durumunda, denetim, ardiye, elleçleme, demuraj, vergi, harç,
+                                bandrol vb. masraflar.</strong></li>
+                        <li><strong>*Kısa mobilyalı eşya detaylı sökümü/kurulumu, özel alet gerektiren mobilyaların
+                                sökümü/kurulumu. (€100-300)</strong></li>
+                        <li><strong>*Özel taşıma sigortası. (Eşyanın değerinin %5 i kadar prim ödenir)</strong></li>
+                        <li><strong>*Kuriler in eve yetişmesi, ikinci kez teslimat, televizyon ve benzeri eşyalar için
+                                özel muhafaza sandık yapılması. (€100-250)</strong></li>
+                        <li><strong>*Uzun mesafe taşıma. (30 metre üzeri olan mesafeli taşımalarda firmanın hamalliye
+                                masrafı (€50-€100)</strong></li>
+                        <li><strong>*Kamyon-kamyonet girmeyen adreslere küçük araç taşıma yapılması. (€50-750)</strong>
+                        </li>
+                        <li><strong>*Piano, çelik kasa, dev eşyaların taşınması vb. aşırılı 120 kg. ve üzeri eşyaların
+                                taşınması. (€100-500)</strong></li>
+                        <li><strong>*Eşyaların temiz değil elleçlenmesi, giriş-çıkış yapılması, sonradan eşya seçilmesi.
+                                (€50-250)</strong></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Payment Terms -->
+            <div class="payment-terms">
+                <strong>ÖDEME ŞEKLİ :</strong> Teklif tutarının %20 si anlaşmaya varıldığında kaparo olarak, geri kalanı
+                ise eşya yola çıktığında ödenecek.<br>
+                Kredi kartı ödemelerinde veya döviz havalelerinde oluşacak masraf veya komisyon bedeli eşya sahibine
+                aittir.<br><br>
+
+                <strong>DİĞER HUSUSLAR:</strong> Yukarıda yazılan eşyanın evden eve taşıma. Lütfen eşyalarınızı
+                sigortalatmak istiyorsanız eşya değerini bildiriniz.<br>
+                taşımanın üst tatlar olması, taşıma yapılacak yerlerde kullanılabilecek yük asansörü olmaması ek ücret
+                talep edilebilir merdivenlerden elde<br>
+                yapılması durumunda inanılmamış üst tatlar merdivenlerden taşıma masrafı çıkabilecek esas alınacaktır.
+                Eşya sahibi gerekli işlemleri (pasaport-ehli eser<br>
+                vb.) işlemleri, gümrüklerde oluşacak masraflar (vergi, harç, bandrol, demuraj, ardiye, elleçleme,
+                denetim) nedeni ile oluşabilecek masraflar<br>
+                eşya sahibine aittir olacak "ambalajlama ve paketleme veya yerleştirme işlemlerini eşya sahibi
+                tarafından yapılacak takdirde, ambalajlama ve<br>
+                işçi masrafı oluşacak hasarlardan ve elektronik eşyaların arızalanmasından firmamız sorumlu
+                tutulmayacaktır.<br>
+                Uzmanlik gerektiren uçucu/tartışılar, davlumbaz, korni, avize, klima, şofben ve eşyaların
+                sökülmesi/montaj işleri, artı eşya kurulumu yapılması,<br>
+                duvara montaj işleri yapılmayacaktır. Para, mücevher vb. kıymetli eşya ve eşyaların taşınması. Gümrük
+                işleri, eşyanın içerisinde ürünlerin<br>
+                kimyasal, yanıcı/parlayıcı ürünleri ve alkol bulunmayacaktır, yanıcı/parlayıcı ürünleri ve alkol
+                bulunmayacaktır, gümrük kanununa aykırı herhangi bir eşya<br>
+                bulunmayacaktır. Eşyanın hasarı, eşya araca istifli bir şekilde yüklendiğinde bulunacaktır, ödeme tutarı
+                net<br>
+                hacim/m3 e göre tespit edilecektir. Teslifte belirtilen transit süre, "teslimat evimizin hazır sayamızı
+                istiyoruz" bildiriminden sonra firmaya
+            </div>
+
+            <!-- Signature Section -->
+            <div class="signature-section">
+                <div class="signature-box">
+                    <div><strong>Firma Yetkilisi</strong></div>
+                    <div class="signature-line"></div>
+                    <div class="company-stamp">
+                        <div>FİRMA<br>KAŞE VE<br>İMZA</div>
+                    </div>
+                </div>
+                <div class="signature-box">
+                    <div><strong>Eşya Sahibi/İmza/Tarih</strong></div>
+                    <div class="signature-line"></div>
+                    <div style="height: 80px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

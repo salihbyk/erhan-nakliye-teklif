@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>JavaScript Test</title>
+</head>
+
+<body>
+    <h1>JavaScript Test</h1>
+    <button onclick="editMainPrice()">Test editMainPrice</button>
+    <span id="mainPriceDisplay" style="display: block;">100 TL</span>
+    <input type="text" id="mainPriceEdit" style="display: none;" value="100">
+
+    <script>
+        function editMainPrice() {
+            console.log('editMainPrice called');
+            const display = document.getElementById('mainPriceDisplay');
+            const input = document.getElementById('mainPriceEdit');
+
+            if (display && input) {
+                display.style.display = 'none';
+                input.style.display = 'inline-block';
+                input.focus();
+                input.select();
+            }
+        }
+    </script>
+</body>
+
+</html>

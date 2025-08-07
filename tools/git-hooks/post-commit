@@ -1,0 +1,78 @@
+#!/bin/bash
+#
+# Git post-commit hook
+# Commit sonrası otomatik güncelleme paketi oluşturur
+#
+
+# Script'in bulunduğu dizin
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Log dosyası
+LOG_FILE="$PROJECT_DIR/tools/auto-update.log"
+
+# Log fonksiyonu
+log_message() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
+}
+
+log_message "Post-commit hook başlatıldı"
+
+# PHP'nin varlığını kontrol et
+if ! command -v php &> /dev/null; then
+    log_message "HATA: PHP bulunamadı"
+    exit 0
+fi
+
+# Son commit mesajını al
+COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+log_message "Commit mesajı: $COMMIT_MESSAGE"
+
+# Eğer commit mesajında [skip-update] varsa atla
+if echo "$COMMIT_MESSAGE" | grep -q "\[skip-update\]"; then
+    log_message "Skip-update flag bulundu, güncelleme atlanıyor"
+    exit 0
+fi
+
+# Config dosyasını kontrol et
+CONFIG_FILE="$PROJECT_DIR/tools/auto-update-config.json"
+if [ ! -f "$CONFIG_FILE" ]; then
+    log_message "Config dosyası bulunamadı, varsayılan oluşturuluyor"
+
+    # Varsayılan config oluştur
+    cat > "$CONFIG_FILE" << 'EOF'
+{
+    "enabled": true,
+    "update_server_url": "https://updates.your-domain.com/api",
+    "project_id": "nakliye-teklif-system",
+    "auto_upload": false,
+    "auto_notify": true,
+    "min_changes": 1
+}
+EOF
+fi
+
+# Config'i oku
+ENABLED=$(php -r "
+    \$config = json_decode(file_get_contents('$CONFIG_FILE'), true);
+    echo \$config['enabled'] ? '1' : '0';
+")
+
+if [ "$ENABLED" != "1" ]; then
+    log_message "Otomatik güncelleme devre dışı"
+    exit 0
+fi
+
+log_message "Otomatik güncelleme sistemi çalıştırılıyor..."
+
+# PHP script'ini çalıştır
+cd "$PROJECT_DIR"
+php tools/auto-update-system.php detect >> "$LOG_FILE" 2>&1
+
+if [ $? -eq 0 ]; then
+    log_message "Otomatik güncelleme başarıyla tamamlandı"
+else
+    log_message "HATA: Otomatik güncelleme başarısız"
+fi
+
+log_message "Post-commit hook tamamlandı"

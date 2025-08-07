@@ -1,0 +1,1 @@
+ALTER TABLE quotes ADD COLUMN intro_text TEXT DEFAULT NULL;

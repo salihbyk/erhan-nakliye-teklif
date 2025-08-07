@@ -1,0 +1,23 @@
+# Hosting sunucusu için PHP ayarları
+RewriteEngine On
+
+# PDF dosyaları için özel yönlendirme
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^view-quote-pdf/(.*)$ view-quote-pdf.php?id=$1 [L,QSA]
+
+# Hata sayfaları
+ErrorDocument 404 /404.php
+ErrorDocument 500 /500.php
+
+# Güvenlik ayarları
+<Files "*.php">
+    php_value display_errors 1
+    php_value error_reporting E_ALL
+</Files>
+
+# Dosya yükleme sınırları
+php_value upload_max_filesize 10M
+php_value post_max_size 10M
+php_value max_execution_time 300
+php_value memory_limit 256M
