@@ -79,6 +79,34 @@ try {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
 
+        // AJAX işlemleri
+    if (isset($_GET['action']) && $_GET['action'] === 'get_template') {
+        header('Content-Type: application/json');
+        $id = $_GET['id'] ?? 0;
+
+        $stmt = $db->prepare("SELECT * FROM quote_templates WHERE id = ?");
+        $stmt->execute([$id]);
+        $template = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($template) {
+            // HTML decode yap
+            if (isset($template['services_content'])) {
+                $template['services_content'] = html_entity_decode($template['services_content'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+            if (isset($template['transport_process_content'])) {
+                $template['transport_process_content'] = html_entity_decode($template['transport_process_content'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+            if (isset($template['terms_content'])) {
+                $template['terms_content'] = html_entity_decode($template['terms_content'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+
+            echo json_encode($template, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        } else {
+            echo json_encode(['error' => 'Template not found']);
+        }
+        exit;
+    }
+
     // Form işlemleri
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = $_POST['action'] ?? '';
@@ -99,10 +127,10 @@ try {
                 // Güncelle
                 $stmt = $db->prepare("
                     UPDATE quote_templates
-                    SET template_name = ?, services_content = ?, terms_content = ?, transport_process_content = ?, trade_type = ?, is_active = ?, updated_at = NOW()
+                    SET template_name = ?, services_content = ?, terms_content = ?, transport_process_content = ?, trade_type = ?, currency = ?, is_active = ?, updated_at = NOW()
                     WHERE id = ?
                 ");
-                $stmt->execute([$template_name, $services_content, $terms_content, $transport_process_content, $trade_type, $is_active, $id]);
+                $stmt->execute([$template_name, $services_content, $terms_content, $transport_process_content, $trade_type, $currency, $is_active, $id]);
                 setSuccessMessage('Şablon başarıyla güncellendi.');
             } else {
                 // Aynı isimde şablon var mı kontrol et (opsiyonel uyarı)
@@ -644,7 +672,7 @@ $messages = getMessages();
 
                                         <div class="d-flex gap-2">
                                             <button class="btn btn-sm btn-outline-primary flex-fill"
-                                                    onclick="editTemplate(<?= htmlspecialchars(json_encode($template)) ?>)">
+                                                    onclick="editTemplate(<?= $template['id'] ?>)">
                                                 <i class="fas fa-edit"></i> Düzenle
                                             </button>
                                             <button class="btn btn-sm btn-outline-danger"
@@ -725,7 +753,7 @@ $messages = getMessages();
 
                                         <div class="d-flex gap-2">
                                             <button class="btn btn-sm btn-outline-primary flex-fill"
-                                                    onclick="editTemplate(<?= htmlspecialchars(json_encode($template)) ?>)">
+                                                    onclick="editTemplate(<?= $template['id'] ?>)">
                                                 <i class="fas fa-edit"></i> Düzenle
                                             </button>
                                             <button class="btn btn-sm btn-outline-danger"
@@ -909,8 +937,7 @@ $messages = getMessages();
                                 <i class="fas fa-cogs text-primary"></i> Hizmetlerimiz İçeriği
                                 <small class="text-muted">(view-quote.php sayfasında "Hizmetlerimiz" bölümünde görünecek)</small>
                             </label>
-                            <div class="border rounded p-3" style="min-height: 100px; cursor: pointer;" id="servicesContent" onclick="openRichEditor(this, 'services_content')">
-                                İçerik eklemek için tıklayın...
+                            <div class="border rounded p-3" style="min-height: 100px; cursor: pointer;" id="servicesContent" data-field="services_content">
                             </div>
                             <textarea name="services_content" style="display: none;"></textarea>
                         </div>
@@ -921,8 +948,7 @@ $messages = getMessages();
                                 <i class="fas fa-truck text-success"></i> Taşınma Süreci İçeriği
                                 <small class="text-muted">(Teklif sayfasında "Taşınma Süreci" bölümünde görünecek)</small>
                             </label>
-                            <div class="border rounded p-3" style="min-height: 100px; cursor: pointer;" id="transportProcessContent" onclick="openRichEditor(this, 'transport_process_content')">
-                                İçerik eklemek için tıklayın...
+                            <div class="border rounded p-3" style="min-height: 100px; cursor: pointer;" id="transportProcessContent" data-field="transport_process_content">
                             </div>
                             <textarea name="transport_process_content" style="display: none;"></textarea>
                         </div>
@@ -933,8 +959,7 @@ $messages = getMessages();
                                 <i class="fas fa-file-contract text-warning"></i> Şartlar İçeriği
                                 <small class="text-muted">(view-quote.php sayfasında "Şartlar" bölümünde görünecek)</small>
                             </label>
-                            <div class="border rounded p-3" style="min-height: 100px; cursor: pointer;" id="termsContent" onclick="openRichEditor(this, 'terms_content')">
-                                İçerik eklemek için tıklayın...
+                            <div class="border rounded p-3" style="min-height: 100px; cursor: pointer;" id="termsContent" data-field="terms_content">
                             </div>
                             <textarea name="terms_content" style="display: none;"></textarea>
                         </div>
@@ -1101,8 +1126,11 @@ $messages = getMessages();
         let currentRichField = null;
         let currentRichElement = null;
         let isSourceView = false;
+        let templateModalInstance = null;
+        let templateModalWasOpen = false;
+        let templateContentCache = {}; // İçerikleri saklamak için cache
 
-        document.addEventListener('DOMContentLoaded', function() {
+                document.addEventListener('DOMContentLoaded', function() {
             // Sayfa yüklendiğinde tüm grupları kapat
             document.querySelectorAll('.group-content').forEach(content => {
                 content.classList.remove('show');
@@ -1112,6 +1140,25 @@ $messages = getMessages();
             // Toggle ikonlarını başlangıç pozisyonuna ayarla
             document.querySelectorAll('.group-toggle').forEach(toggle => {
                 toggle.style.transform = 'rotate(-90deg)';
+            });
+
+            // Modal event listener'ları kaldır
+            const templateModal = document.getElementById('templateModal');
+            if (templateModal) {
+                // Önce tüm event listener'ları kaldır
+                templateModal.removeEventListener('show.bs.modal', () => {});
+                templateModal.removeEventListener('shown.bs.modal', () => {});
+            }
+
+            // Rich editor click events - event delegation kullan
+            document.addEventListener('click', function(e) {
+                if (e.target.matches('#servicesContent, #transportProcessContent, #termsContent')) {
+                    e.preventDefault();
+                    const field = e.target.getAttribute('data-field');
+                    if (field) {
+                        openRichEditor(e.target, field);
+                    }
+                }
             });
         });
 
@@ -1124,8 +1171,33 @@ $messages = getMessages();
             const content = document.getElementById('richEditorContent');
             const title = document.getElementById('richEditorTitle');
 
-            // Get current content
-            let currentContent = element.innerHTML.replace(/İçerik eklemek için tıklayın\.\.\./, '').trim();
+            // Template modal aktifse geçici olarak kapat (Bootstrap focus trap'i engellemek için)
+            const templateModalEl = document.getElementById('templateModal');
+            if (templateModalEl) {
+                const existing = bootstrap.Modal.getInstance(templateModalEl);
+                if (existing) {
+                    templateModalInstance = existing;
+                } else {
+                    templateModalInstance = new bootstrap.Modal(templateModalEl);
+                }
+                // Eğer görünürse kapat
+                if (templateModalEl.classList.contains('show')) {
+                    templateModalWasOpen = true;
+                    templateModalInstance.hide();
+                } else {
+                    templateModalWasOpen = false;
+                }
+            }
+
+            // Get current content - placeholder text'i kontrol et
+            let currentContent = element.innerHTML;
+
+            // Eğer sadece placeholder varsa boş döndür
+            if (currentContent.includes('<span style="color: #999;">İçerik eklemek için tıklayın...</span>')) {
+                currentContent = '';
+            } else {
+                currentContent = currentContent.replace(/İçerik eklemek için tıklayın\.\.\./, '').trim();
+            }
 
             // Field title mapping
             const fieldTitles = {
@@ -1148,6 +1220,12 @@ $messages = getMessages();
             currentRichField = null;
             currentRichElement = null;
             isSourceView = false;
+
+            // Eğer template modalı önceden açıksa tekrar göster
+            if (templateModalWasOpen && templateModalInstance) {
+                templateModalInstance.show();
+                templateModalWasOpen = false;
+            }
         }
 
         function saveRichContent() {
@@ -1286,9 +1364,9 @@ $messages = getMessages();
             document.getElementById('templateActive').checked = true;
 
             // Tüm editör alanlarını temizle
-            document.getElementById('servicesContent').innerHTML = 'İçerik eklemek için tıklayın...';
-            document.getElementById('transportProcessContent').innerHTML = 'İçerik eklemek için tıklayın...';
-            document.getElementById('termsContent').innerHTML = 'İçerik eklemek için tıklayın...';
+            document.getElementById('servicesContent').innerHTML = '<span style="color: #999;">İçerik eklemek için tıklayın...</span>';
+            document.getElementById('transportProcessContent').innerHTML = '<span style="color: #999;">İçerik eklemek için tıklayın...</span>';
+            document.getElementById('termsContent').innerHTML = '<span style="color: #999;">İçerik eklemek için tıklayın...</span>';
 
             // Hidden textarea'ları temizle
             document.querySelector('textarea[name="services_content"]').value = '';
@@ -1299,28 +1377,105 @@ $messages = getMessages();
             modal.show();
         }
 
-        function editTemplate(template) {
-            document.getElementById('modalTitle').textContent = 'Şablon Düzenle';
-            document.getElementById('templateId').value = template.id;
-            document.getElementById('templateName').value = template.template_name;
-            document.getElementById('transportModeId').value = template.transport_mode_id;
-            document.getElementById('templateLanguage').value = template.language;
-            document.getElementById('templateCurrency').value = template.currency;
-            document.getElementById('templateTradeType').value = template.trade_type || 'import';
-            document.getElementById('templateActive').checked = template.is_active == 1;
+        function editTemplate(templateId) {
+            // AJAX ile şablon verilerini al
+            fetch(`?action=get_template&id=${templateId}`)
+                .then(response => response.json())
+                .then(template => {
+                    console.log('Template data received:', template);
 
-            // Editör alanlarına içerikleri yükle
-            document.getElementById('servicesContent').innerHTML = template.services_content || 'İçerik eklemek için tıklayın...';
-            document.getElementById('transportProcessContent').innerHTML = template.transport_process_content || 'İçerik eklemek için tıklayın...';
-            document.getElementById('termsContent').innerHTML = template.terms_content || 'İçerik eklemek için tıklayın...';
+                    document.getElementById('modalTitle').textContent = 'Şablon Düzenle';
+                    document.getElementById('templateId').value = template.id;
+                    document.getElementById('templateName').value = template.template_name;
+                    document.getElementById('transportModeId').value = template.transport_mode_id;
+                    document.getElementById('templateLanguage').value = template.language;
+                    document.getElementById('templateCurrency').value = template.currency;
+                    document.getElementById('templateTradeType').value = template.trade_type || 'import';
+                    document.getElementById('templateActive').checked = template.is_active == 1;
 
-            // Hidden textarea'ları güncelle
-            document.querySelector('textarea[name="services_content"]').value = template.services_content || '';
-            document.querySelector('textarea[name="transport_process_content"]').value = template.transport_process_content || '';
-            document.querySelector('textarea[name="terms_content"]').value = template.terms_content || '';
+                    // Debug için içerikleri logla
+                    console.log('Services content:', template.services_content);
+                    console.log('Transport process content:', template.transport_process_content);
+                    console.log('Terms content:', template.terms_content);
 
-            const modal = new bootstrap.Modal(document.getElementById('templateModal'));
-            modal.show();
+                    // Editör alanlarına içerikleri yükle
+                    const servicesEl = document.getElementById('servicesContent');
+                    const transportEl = document.getElementById('transportProcessContent');
+                    const termsEl = document.getElementById('termsContent');
+
+                    console.log('Elements found:', {
+                        services: !!servicesEl,
+                        transport: !!transportEl,
+                        terms: !!termsEl
+                    });
+
+                                        if (servicesEl) {
+                        servicesEl.innerHTML = template.services_content || '<span style="color: #999;">İçerik eklemek için tıklayın...</span>';
+                        console.log('Services content set to:', servicesEl.innerHTML);
+                    }
+
+                    if (transportEl) {
+                        transportEl.innerHTML = template.transport_process_content || '<span style="color: #999;">İçerik eklemek için tıklayın...</span>';
+                        console.log('Transport content set to:', transportEl.innerHTML);
+                    }
+
+                    if (termsEl) {
+                        termsEl.innerHTML = template.terms_content || '<span style="color: #999;">İçerik eklemek için tıklayın...</span>';
+                        console.log('Terms content set to:', termsEl.innerHTML);
+                    }
+
+                    // Hidden textarea'ları güncelle
+                    document.querySelector('textarea[name="services_content"]').value = template.services_content || '';
+                    document.querySelector('textarea[name="transport_process_content"]').value = template.transport_process_content || '';
+                    document.querySelector('textarea[name="terms_content"]').value = template.terms_content || '';
+
+                    // İçerikleri cache'e al
+                    window.templateContentCache = {
+                        services: template.services_content || '',
+                        transport: template.transport_process_content || '',
+                        terms: template.terms_content || ''
+                    };
+
+                    // Modal'ı aç
+                    const modalEl = document.getElementById('templateModal');
+                    const modal = new bootstrap.Modal(modalEl);
+
+                    // Modal tamamen açıldığında içerikleri set et
+                                        modalEl.addEventListener('shown.bs.modal', function onModalShown() {
+                        console.log('Modal shown event - restoring content from cache');
+                        console.log('Cache content:', window.templateContentCache);
+
+                        // Cache'ten içerikleri geri yükle
+                        if (window.templateContentCache.services) {
+                            document.getElementById('servicesContent').innerHTML = window.templateContentCache.services;
+                        } else {
+                            document.getElementById('servicesContent').innerHTML = '<span style="color: #999;">İçerik eklemek için tıklayın...</span>';
+                        }
+
+                        if (window.templateContentCache.transport) {
+                            document.getElementById('transportProcessContent').innerHTML = window.templateContentCache.transport;
+                        } else {
+                            document.getElementById('transportProcessContent').innerHTML = '<span style="color: #999;">İçerik eklemek için tıklayın...</span>';
+                        }
+
+                        if (window.templateContentCache.terms) {
+                            document.getElementById('termsContent').innerHTML = window.templateContentCache.terms;
+                        } else {
+                            document.getElementById('termsContent').innerHTML = '<span style="color: #999;">İçerik eklemek için tıklayın...</span>';
+                        }
+
+                        console.log('Content restored successfully');
+
+                        // Event listener'ı kaldır
+                        modalEl.removeEventListener('shown.bs.modal', onModalShown);
+                    });
+
+                    modal.show();
+                })
+                .catch(error => {
+                    console.error('Error loading template:', error);
+                    alert('Şablon yüklenirken hata oluştu!');
+                });
         }
 
         function deleteTemplate(id, name) {

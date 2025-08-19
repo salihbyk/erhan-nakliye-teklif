@@ -1,4 +1,5 @@
 <?php
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET');
@@ -13,19 +14,33 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 try {
-    $quote_id = $_GET['quote_id'] ?? null;
+    $quote_param = $_GET['quote_id'] ?? null;
 
-    if (!$quote_id) {
+    if (!$quote_param) {
         throw new Exception('Teklif ID gereklidir');
     }
 
     $database = new Database();
     $db = $database->getConnection();
 
-    // Quote var mı kontrol et
-    $stmt = $db->prepare("SELECT id FROM quotes WHERE id = ? AND is_active = 1");
-    $stmt->execute([$quote_id]);
-    if (!$stmt->fetch()) {
+    // Quote'u bul (ID veya quote_number ile)
+    if (is_numeric($quote_param)) {
+        // Numeric ise direkt ID olarak kullan
+        $stmt = $db->prepare("SELECT id FROM quotes WHERE id = ? AND is_active = 1");
+        $stmt->execute([$quote_param]);
+        $quote = $stmt->fetch();
+        $actual_quote_id = $quote_param;
+    } else {
+        // String ise quote_number olarak kullan
+        $stmt = $db->prepare("SELECT id FROM quotes WHERE quote_number = ? AND is_active = 1");
+        $stmt->execute([$quote_param]);
+        $quote = $stmt->fetch();
+        $actual_quote_id = $quote ? $quote['id'] : null;
+    }
+
+
+
+    if (!$quote) {
         throw new Exception('Teklif bulunamadı');
     }
 
@@ -36,7 +51,7 @@ try {
         WHERE quote_id = ? AND is_additional = 1
         ORDER BY created_at ASC
     ");
-    $stmt->execute([$quote_id]);
+    $stmt->execute([$actual_quote_id]);
     $costs_raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Description'ı name ve description olarak ayır

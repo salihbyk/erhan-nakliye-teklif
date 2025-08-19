@@ -1,0 +1,38 @@
+{
+    "update_method": "github",
+    "github": {
+        "owner": "your-github-username",
+        "repo": "erhan-nakliye-teklif",
+        "token": null,
+        "check_interval": 86400,
+        "auto_install": false
+    },
+    "legacy_server": {
+        "url": "https://updates.your-domain.com/api",
+        "project_id": "nakliye-teklif-system",
+        "api_key": null
+    },
+    "settings": {
+        "backup_before_update": true,
+        "backup_retention_days": 30,
+        "max_backup_size_mb": 100,
+        "update_notifications": true,
+        "admin_email": "admin@example.com"
+    },
+    "excluded_paths": [
+        "uploads/",
+        "backups/",
+        "updates/",
+        "vendor/",
+        ".git/",
+        "*.log",
+        "*.backup.*",
+        "config/database.php",
+        "tools/auto-update-config.json"
+    ],
+    "protected_files": [
+        "config/database.php",
+        ".htaccess",
+        "robots.txt"
+    ]
+}

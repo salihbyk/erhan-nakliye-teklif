@@ -1,0 +1,46 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 2.0.1)'
+        required: true
+        type: string
+      description:
+        description: 'Release description'
+        required: true
+        type: string
+
+jobs:
+  create-manual-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: zip, mbstring
+
+    - name: Update version file
+      run: |
+        echo "${{ github.event.inputs.version }}" > version.txt
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add version.txt
+        git commit -m "Update version to ${{ github.event.inputs.version }}" || echo "No changes to commit"
+
+    - name: Create and push tag
+      run: |
+        git tag -a "v${{ github.event.inputs.version }}" -m "${{ github.event.inputs.description }}"
+        git push origin "v${{ github.event.inputs.version }}"
+
+    - name: Trigger release workflow
+      run: |
+        echo "Tag created. Release workflow will be triggered automatically."

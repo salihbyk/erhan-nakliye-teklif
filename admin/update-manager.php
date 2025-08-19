@@ -3,6 +3,7 @@ session_start();
 require_once '../config/database.php';
 require_once '../includes/functions.php';
 require_once '../includes/update-functions.php';
+require_once '../tools/git-auto-update.php';
 
 // Oturum kontrolü
 if (!isset($_SESSION['admin_id'])) {
@@ -10,8 +11,94 @@ if (!isset($_SESSION['admin_id'])) {
     exit;
 }
 
+// Git Auto Update sistemi için config
+$gitUpdateConfig = [
+    'repo_owner' => 'salihbyk', // GitHub kullanıcı adınız
+    'repo_name' => 'erhan-nakliye-teklif',
+    'github_token' => null // Private repo için token
+];
+
+$gitUpdater = new GitAutoUpdate($gitUpdateConfig);
+
 $message = '';
 $error = '';
+$updateInfo = null;
+
+// Git üzerinden güncelleme kontrolü
+if (isset($_POST['action']) && $_POST['action'] === 'check_git_updates') {
+    try {
+        $updateInfo = $gitUpdater->checkForUpdates();
+
+        if ($updateInfo['success']) {
+            if ($updateInfo['update_available']) {
+                $message = "Yeni güncelleme mevcut: v{$updateInfo['latest_version']}";
+            } else {
+                $message = "Sistem güncel. Mevcut versiyon: v{$updateInfo['current_version']}";
+            }
+        } else {
+            $error = "Güncelleme kontrolü başarısız: " . $updateInfo['error'];
+        }
+    } catch (Exception $e) {
+        $error = "Güncelleme kontrolü hatası: " . $e->getMessage();
+    }
+}
+
+// Git üzerinden güncelleme yükleme
+if (isset($_POST['action']) && $_POST['action'] === 'install_git_update') {
+    try {
+        $updateInfo = $gitUpdater->checkForUpdates();
+
+        if ($updateInfo['success'] && $updateInfo['update_available']) {
+            $result = $gitUpdater->downloadAndInstall($updateInfo);
+
+            if ($result['success']) {
+                $message = $result['message'] . " (v{$result['version']})";
+
+                // Sayfayı yenile
+                echo "<script>setTimeout(function() { window.location.reload(); }, 3000);</script>";
+            } else {
+                $error = "Güncelleme yüklenemedi: " . $result['error'];
+            }
+        } else {
+            $error = "Güncelleme mevcut değil veya kontrol hatası.";
+        }
+    } catch (Exception $e) {
+        $error = "Güncelleme hatası: " . $e->getMessage();
+    }
+}
+
+// Otomatik paket yükleme (localhost için)
+if (isset($_POST['action']) && $_POST['action'] === 'auto_upload_package' && isset($_POST['package_file'])) {
+    try {
+        $packageFile = $_POST['package_file'];
+        $toolsPath = '../tools/' . $packageFile;
+
+        if (!file_exists($toolsPath)) {
+            throw new Exception('Paket dosyası bulunamadı: ' . $packageFile);
+        }
+
+        // Dosyayı upload dizinine kopyala
+        $uploadPath = '../temp_auto_upload_' . time() . '.zip';
+        if (!copy($toolsPath, $uploadPath)) {
+            throw new Exception('Paket dosyası kopyalanamadı.');
+        }
+
+        // $_FILES array'ini simüle et
+        $_FILES['update_package'] = [
+            'name' => $packageFile,
+            'tmp_name' => $uploadPath,
+            'error' => UPLOAD_ERR_OK,
+            'size' => filesize($uploadPath)
+        ];
+
+        $_POST['action'] = 'install_update';
+
+        // Normal update işlemini başlat
+
+    } catch (Exception $e) {
+        $error = 'Otomatik yükleme hatası: ' . $e->getMessage();
+    }
+}
 
 // Update işlemini gerçekleştir
 if ($_POST['action'] === 'install_update' && isset($_FILES['update_package'])) {
@@ -91,11 +178,32 @@ if ($_POST['action'] === 'install_update' && isset($_FILES['update_package'])) {
             }
         }
 
-        // Dosyaları kopyala
+        // Dosyaları kopyala (config koruması ile)
         if (isset($config['files']) && !empty($config['files'])) {
+            $protectedFiles = [
+                'config/database.php',
+                'config/config.php',
+                '.env',
+                'uploads/',
+                'backups/'
+            ];
+
             foreach ($config['files'] as $file) {
                 $sourcePath = $extractPath . '/files/' . $file['source'];
                 $targetPath = '../' . $file['target'];
+
+                // Config dosyalarını koru
+                $isProtected = false;
+                foreach ($protectedFiles as $protectedPattern) {
+                    if (fnmatch($protectedPattern, $file['target'])) {
+                        $isProtected = true;
+                        break;
+                    }
+                }
+
+                if ($isProtected) {
+                    continue; // Config dosyalarını atla
+                }
 
                 if (file_exists($sourcePath)) {
                     // Hedef dizini oluştur
@@ -258,6 +366,36 @@ function deleteDirectory($dir) {
             border-radius: 50px;
         }
 
+        .update-info-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .release-notes {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+        }
+
+        .info-box {
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid var(--secondary-color);
+            padding: 0.75rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-box i {
+            color: var(--secondary-color);
+        }
+
         @media (max-width: 768px) {
             .main-content {
                 margin-left: 0;
@@ -297,6 +435,126 @@ function deleteDirectory($dir) {
             <?php endif; ?>
 
             <div class="row">
+                <!-- Git Güncelleme Kontrolü -->
+                <div class="col-12 mb-4">
+                    <div class="glass-card">
+                        <div class="card-header border-0 bg-transparent">
+                            <h5 class="mb-0" style="color: var(--primary-color); font-weight: 600;">
+                                <i class="fab fa-github me-2"></i>GitHub Güncellemeleri
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" class="mb-3">
+                                <input type="hidden" name="action" value="check_git_updates">
+                                <div class="row align-items-end">
+                                    <div class="col-md-8">
+                                        <div class="info-box">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span>Sistem GitHub üzerinden otomatik güncelleme kontrolü yapabilir.</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-sync-alt me-2"></i>Güncellemeleri Kontrol Et
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+
+                            <?php if (isset($updateInfo) && $updateInfo): ?>
+                                <?php if ($updateInfo['success']): ?>
+                                    <div class="update-info-card">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h6 class="mb-3">Versiyon Bilgileri</h6>
+                                                <p class="mb-1">
+                                                    <strong>Mevcut Versiyon:</strong>
+                                                    <span class="badge bg-secondary">v<?= htmlspecialchars($updateInfo['current_version']) ?></span>
+                                                </p>
+                                                <p class="mb-1">
+                                                    <strong>Son Versiyon:</strong>
+                                                    <span class="badge bg-<?= $updateInfo['update_available'] ? 'success' : 'secondary' ?>">
+                                                        v<?= htmlspecialchars($updateInfo['latest_version']) ?>
+                                                    </span>
+                                                </p>
+                                                <?php if ($updateInfo['published_at']): ?>
+                                                <p class="mb-0">
+                                                    <strong>Yayın Tarihi:</strong>
+                                                    <?= date('d.m.Y H:i', strtotime($updateInfo['published_at'])) ?>
+                                                </p>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <?php if ($updateInfo['update_available']): ?>
+                                                    <h6 class="mb-3">Güncelleme Mevcut!</h6>
+                                                    <?php if ($updateInfo['release_notes']): ?>
+                                                        <div class="release-notes">
+                                                            <h6 class="small">Sürüm Notları:</h6>
+                                                            <div class="small"><?= nl2br(htmlspecialchars($updateInfo['release_notes'])) ?></div>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                    <form method="POST" class="mt-3" onsubmit="return confirm('Güncelleme yüklenecek. Devam etmek istiyor musunuz?');">
+                                                        <input type="hidden" name="action" value="install_git_update">
+                                                        <button type="submit" class="btn btn-success">
+                                                            <i class="fas fa-download me-2"></i>Güncellemeyi Yükle
+                                                        </button>
+                                                    </form>
+                                                <?php else: ?>
+                                                    <div class="alert alert-success mb-0">
+                                                        <i class="fas fa-check-circle me-2"></i>Sistem güncel!
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hızlı Paket Oluşturma (Sadece localhost için) -->
+                <?php if ($_SERVER['HTTP_HOST'] === 'localhost' || strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false): ?>
+                <div class="col-12 mb-4">
+                    <div class="glass-card">
+                        <div class="card-header border-0 bg-transparent">
+                            <h5 class="mb-0" style="color: var(--warning-color); font-weight: 600;">
+                                <i class="fas fa-tools me-2"></i>Geliştirici Araçları (Localhost)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Bu bölüm sadece yerel geliştirme ortamında görünür.
+                            </div>
+
+                            <form id="devPackageForm" class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Versiyon Türü</label>
+                                    <select class="form-select" name="version_type">
+                                        <option value="patch">Patch (1.0.0 → 1.0.1)</option>
+                                        <option value="minor">Minor (1.0.0 → 1.1.0)</option>
+                                        <option value="major">Major (1.0.0 → 2.0.0)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Güncelleme Açıklaması</label>
+                                    <input type="text" class="form-control" name="description" placeholder="Yeni özellikler ve düzeltmeler" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button type="submit" class="btn btn-warning d-block w-100">
+                                        <i class="fas fa-magic me-2"></i>Paket Oluştur
+                                    </button>
+                                </div>
+                            </form>
+
+                            <div id="devPackageResult" class="mt-3" style="display: none;"></div>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <!-- Güncelleme Yükleme -->
                 <div class="col-lg-8 mb-4">
                     <div class="glass-card">
@@ -529,7 +787,117 @@ function deleteDirectory($dir) {
                     progressBar.style.width = progress + '%';
                 }, 200);
             });
+
+            // Geliştirici paket oluşturma formu
+            const devPackageForm = document.getElementById('devPackageForm');
+            if (devPackageForm) {
+                devPackageForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    createDevPackage();
+                });
+            }
         });
+
+        function createDevPackage() {
+            const form = document.getElementById('devPackageForm');
+            const formData = new FormData(form);
+            formData.append('action', 'create_dev_package');
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Oluşturuluyor...';
+
+            const resultDiv = document.getElementById('devPackageResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-cogs fa-spin me-2"></i>Paket oluşturuluyor...</div>';
+
+            fetch('../tools/dev-packager.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <h6><i class="fas fa-check-circle me-2"></i>Paket Başarıyla Oluşturuldu!</h6>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Dosya:</strong> ${data.file}<br>
+                                    <strong>Versiyon:</strong> v${data.version}<br>
+                                    <strong>Boyut:</strong> ${(data.size / 1024).toFixed(2)} KB
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <a href="../tools/${data.file}" class="btn btn-success btn-sm me-2" download>
+                                        <i class="fas fa-download me-1"></i>İndir
+                                    </a>
+                                    <button class="btn btn-primary btn-sm" onclick="autoUploadPackage('${data.file}')">
+                                        <i class="fas fa-upload me-1"></i>Otomatik Yükle
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    // Formu temizle
+                    form.reset();
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Hata: ${data.error}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Beklenmeyen bir hata oluştu.
+                    </div>
+                `;
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            });
+        }
+
+        function autoUploadPackage(filename) {
+            if (!confirm('Bu paketi otomatik olarak yüklemek istediğinizden emin misiniz?\n\nDosya: ' + filename)) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('action', 'auto_upload_package');
+            formData.append('package_file', filename);
+
+            // Loading göster
+            const resultDiv = document.getElementById('devPackageResult');
+            resultDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-cogs fa-spin me-2"></i>Paket otomatik olarak yükleniyor...</div>';
+
+            // Sayfayı yeniden yükle (POST ile)
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.style.display = 'none';
+
+            const actionInput = document.createElement('input');
+            actionInput.name = 'action';
+            actionInput.value = 'auto_upload_package';
+            form.appendChild(actionInput);
+
+            const fileInput = document.createElement('input');
+            fileInput.name = 'package_file';
+            fileInput.value = filename;
+            form.appendChild(fileInput);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
     </script>
     <script src="includes/sidebar.js"></script>
 </body>

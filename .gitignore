@@ -1,0 +1,55 @@
+# Konfigürasyon dosyaları
+config/database.php
+tools/auto-update-config.json
+
+# Upload dizinleri
+uploads/
+backups/
+updates/
+
+# Geçici dosyalar
+temp_*
+*.backup.*
+*.log
+
+# Paket dosyaları
+*.zip
+update_package_*
+
+# IDE dosyaları
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistem dosyaları
+.DS_Store
+Thumbs.db
+
+# PHP hata logları
+error_log
+php_errors.log
+
+# Yerel ayarlar
+.env
+local-settings.php
+
+# Node modules (eğer kullanılıyorsa)
+node_modules/
+
+# Composer vendor (local kurulum için)
+/vendor/
+
+# Test dosyaları
+test.php
+test.html
+debug-*.php
+
+# Backup dosyaları
+*.sql.backup
+*.sql.gz
+database-backup-*
+
+# Auto-sync yapılandırması
+sync-config.json
+auto-sync.lock

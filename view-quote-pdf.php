@@ -791,7 +791,7 @@ function formatPriceWithCurrency($price, $currency) {
             </div>
 
             <!-- Content in 2 columns - Compact Layout -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; background: white; padding: 10px 15px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; background: white; padding: 10px 15px;">
 
                 <!-- Left Column -->
                 <div>
@@ -817,7 +817,7 @@ function formatPriceWithCurrency($price, $currency) {
                         <span style="font-size: 9px;"><?php echo htmlspecialchars(!empty($quote['custom_transport_name']) ? $quote['custom_transport_name'] : translateTransportMode($quote['transport_name'], $t)); ?></span>
                     </div>
 
-                    <?php if (!empty($quote['weight'])): ?>
+                    <?php if (strtolower($quote['transport_name']) === 'havayolu' && !empty($quote['weight'])): ?>
                     <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
                         <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['weight'] ?>:</span>
                         <span style="font-size: 9px;"><?php echo number_format($quote['weight'], 0, ',', '.'); ?> kg</span>
@@ -831,7 +831,7 @@ function formatPriceWithCurrency($price, $currency) {
                     </div>
                     <?php endif; ?>
 
-                    <?php if (!empty($quote['pieces'])): ?>
+                    <?php if (strtolower($quote['transport_name']) === 'havayolu' && !empty($quote['pieces'])): ?>
                     <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
                         <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['pieces'] ?>:</span>
                         <span style="font-size: 9px;"><?php echo number_format($quote['pieces'], 0, ',', '.'); ?></span>
@@ -911,14 +911,13 @@ function formatPriceWithCurrency($price, $currency) {
                     </div>
                     <?php endif; ?>
                 </div>
-            </div>
 
-            <!-- Custom Fields (Özel Alanlar) -->
-            <?php
-            // Custom alanları varsa göster
-            if (!empty($quote['custom_fields'])) {
-                $custom_fields = json_decode($quote['custom_fields'], true);
-                if ($custom_fields && is_array($custom_fields) && count($custom_fields) > 0) {
+                <!-- Custom Fields (Özel Alanlar) -->
+                <?php
+                // Custom alanları varsa göster
+                if (!empty($quote['custom_fields'])) {
+                    $custom_fields = json_decode($quote['custom_fields'], true);
+                    if ($custom_fields && is_array($custom_fields) && count($custom_fields) > 0) {
                     // Custom alanları grup halinde organize et (her 4 alan 1 satır - 2 left, 2 right)
                     $fieldKeys = array_keys($custom_fields);
                     $fieldPairs = [];
@@ -939,39 +938,77 @@ function formatPriceWithCurrency($price, $currency) {
                         }
                     }
 
-                    // Her satır için HTML oluştur
-                    foreach ($fieldPairs as $pair) {
-                        echo '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; background: white; padding: 0 15px 6px 15px;">';
+                    // Custom field'ları organiza et (admin ile aynı formatta)
+                    $organizedFields = [];
+                    $maxRowNumber = 0;
 
-                        // Sol kolon
-                        echo '<div>';
-                        if (isset($custom_fields[$pair['label1']]) && isset($custom_fields[$pair['value1']])) {
-                            echo '<div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">';
-                            echo '<span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;">' . htmlspecialchars($custom_fields[$pair['label1']]) . ':</span>';
-                            echo '<span style="font-size: 9px;">';
-                            echo htmlspecialchars($custom_fields[$pair['value1']]);
-                            echo '</span>';
+                    foreach ($fieldKeys as $key) {
+                        if (preg_match('/custom_(?:label|value|label2|value2)_(\d+)/', $key, $matches)) {
+                            $rowNum = intval($matches[1]);
+                            if ($rowNum > $maxRowNumber) {
+                                $maxRowNumber = $rowNum;
+                            }
+                        }
+                    }
+
+                    // Organize fields by row number
+                    for ($i = 1; $i <= $maxRowNumber; $i++) {
+                        $label1Key = "custom_label_$i";
+                        $value1Key = "custom_value_$i";
+                        $label2Key = "custom_label2_$i";
+                        $value2Key = "custom_value2_$i";
+
+                        if (isset($custom_fields[$label1Key]) && isset($custom_fields[$value1Key])) {
+                            $organizedFields[] = [
+                                'label1' => $label1Key,
+                                'value1' => $value1Key,
+                                'label2' => isset($custom_fields[$label2Key]) ? $label2Key : null,
+                                'value2' => isset($custom_fields[$value2Key]) ? $value2Key : null
+                            ];
+                        }
+                    }
+
+                                        // Ana grid container'ın içinde devam et
+                    if (!empty($organizedFields)) {
+                        // Section title'ı al
+                        $sectionTitle = isset($custom_fields['custom_section_title']) ? htmlspecialchars($custom_fields['custom_section_title']) : 'Ek olarak:';
+
+                        // İlk custom field'dan önce ayırıcı ekle
+                        echo '<div style="grid-column: 1 / -1; display: flex; align-items: center; margin: 10px 0 8px 0;">';
+                        echo '<span style="font-weight: 600; color: #2c5aa0; font-size: 10px; white-space: nowrap;">' . $sectionTitle . '</span>';
+                        echo '<div style="flex: 1; height: 1px; background: #ddd; margin-left: 10px;"></div>';
+                        echo '</div>';
+
+                        foreach ($organizedFields as $pair) {
+                            // Sol kolon
+                            echo '<div>';
+                            if (isset($custom_fields[$pair['label1']]) && isset($custom_fields[$pair['value1']])) {
+                                echo '<div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">';
+                                echo '<span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;">' . htmlspecialchars($custom_fields[$pair['label1']]) . ':</span>';
+                                echo '<span style="font-size: 9px;">';
+                                echo htmlspecialchars($custom_fields[$pair['value1']]);
+                                echo '</span>';
+                                echo '</div>';
+                            }
+                            echo '</div>';
+
+                            // Sağ kolon
+                            echo '<div>';
+                            if ($pair['label2'] && $pair['value2'] && isset($custom_fields[$pair['label2']]) && isset($custom_fields[$pair['value2']])) {
+                                echo '<div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">';
+                                echo '<span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;">' . htmlspecialchars($custom_fields[$pair['label2']]) . ':</span>';
+                                echo '<span style="font-size: 9px;">';
+                                echo htmlspecialchars($custom_fields[$pair['value2']]);
+                                echo '</span>';
+                                echo '</div>';
+                            }
                             echo '</div>';
                         }
-                        echo '</div>';
-
-                        // Sağ kolon
-                        echo '<div>';
-                        if ($pair['label2'] && $pair['value2'] && isset($custom_fields[$pair['label2']]) && isset($custom_fields[$pair['value2']])) {
-                            echo '<div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">';
-                            echo '<span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;">' . htmlspecialchars($custom_fields[$pair['label2']]) . ':</span>';
-                            echo '<span style="font-size: 9px;">';
-                            echo htmlspecialchars($custom_fields[$pair['value2']]);
-                            echo '</span>';
-                            echo '</div>';
-                        }
-                        echo '</div>';
-
-                        echo '</div>';
                     }
                 }
             }
             ?>
+            </div>
         </div>
 
         <!-- Content -->

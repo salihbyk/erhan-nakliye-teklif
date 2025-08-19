@@ -1670,7 +1670,9 @@ function formatPriceWithCurrency($price, $currency) {
                 <!-- Additional Costs Table -->
                 <div id="additionalCostsTable">
                     <!-- Ek maliyetler buraya eklenecek -->
-                            </div>
+                </div>
+
+
 
 
 
@@ -1729,7 +1731,7 @@ function formatPriceWithCurrency($price, $currency) {
                     </div>
 
                     <!-- Content in 2 columns - Compact Layout -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 60px; background: white; padding: 15px 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; background: white; padding: 15px 20px;">
 
                                                 <!-- Left Column -->
                         <div>
@@ -1770,7 +1772,7 @@ function formatPriceWithCurrency($price, $currency) {
                                 </span>
                             </div>
 
-                            <?php if (!empty($quote['weight'])): ?>
+                            <?php if (strtolower($quote['transport_name']) === 'havayolu' && !empty($quote['weight'])): ?>
                             <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
                                 <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['weight'] ?>:</span>
                                 <span    style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
@@ -1779,7 +1781,7 @@ function formatPriceWithCurrency($price, $currency) {
                                 </span>
                             </div>
                             <?php endif; ?>
-                            <?php if (!empty($quote['pieces'])): ?>
+                            <?php if (strtolower($quote['transport_name']) === 'havayolu' && !empty($quote['pieces'])): ?>
                             <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
                                 <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['pieces'] ?>:</span>
                                 <span    style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
@@ -1841,14 +1843,13 @@ function formatPriceWithCurrency($price, $currency) {
 
 
                         </div>
-                    </div>
 
-                    <!-- Custom Fields (Özel Alanlar) -->
-                    <?php
-                    // Custom alanları varsa göster
-                    if (!empty($quote['custom_fields'])) {
-                        $custom_fields = json_decode($quote['custom_fields'], true);
-                        if ($custom_fields && is_array($custom_fields) && count($custom_fields) > 0) {
+                        <!-- Custom Fields (Özel Alanlar) -->
+                        <?php
+                        // Custom alanları varsa göster
+                        if (!empty($quote['custom_fields'])) {
+                            $custom_fields = json_decode($quote['custom_fields'], true);
+                            if ($custom_fields && is_array($custom_fields) && count($custom_fields) > 0) {
                             // Custom alanları grup halinde organize et (her 4 alan 1 satır - 2 left, 2 right)
                             $fieldKeys = array_keys($custom_fields);
                             $fieldPairs = [];
@@ -1869,39 +1870,77 @@ function formatPriceWithCurrency($price, $currency) {
                                 }
                             }
 
-                            // Her satır için HTML oluştur
-                            foreach ($fieldPairs as $pair) {
-                                echo '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 60px; background: white; padding: 0 20px 8px 20px;">';
+                            // Custom field'ları organiza et (admin ile aynı formatta)
+                            $organizedFields = [];
+                            $maxRowNumber = 0;
 
-                                // Sol kolon
-                                echo '<div>';
-                                if (isset($custom_fields[$pair['label1']]) && isset($custom_fields[$pair['value1']])) {
-                                    echo '<div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">';
-                                    echo '<span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;">' . htmlspecialchars($custom_fields[$pair['label1']]) . ':</span>';
-                                    echo '<span style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right;">';
-                                    echo htmlspecialchars($custom_fields[$pair['value1']]);
-                                    echo '</span>';
+                            foreach ($fieldKeys as $key) {
+                                if (preg_match('/custom_(?:label|value|label2|value2)_(\d+)/', $key, $matches)) {
+                                    $rowNum = intval($matches[1]);
+                                    if ($rowNum > $maxRowNumber) {
+                                        $maxRowNumber = $rowNum;
+                                    }
+                                }
+                            }
+
+                            // Organize fields by row number
+                            for ($i = 1; $i <= $maxRowNumber; $i++) {
+                                $label1Key = "custom_label_$i";
+                                $value1Key = "custom_value_$i";
+                                $label2Key = "custom_label2_$i";
+                                $value2Key = "custom_value2_$i";
+
+                                if (isset($custom_fields[$label1Key]) && isset($custom_fields[$value1Key])) {
+                                    $organizedFields[] = [
+                                        'label1' => $label1Key,
+                                        'value1' => $value1Key,
+                                        'label2' => isset($custom_fields[$label2Key]) ? $label2Key : null,
+                                        'value2' => isset($custom_fields[$value2Key]) ? $value2Key : null
+                                    ];
+                                }
+                            }
+
+                                                        // Ana grid container'ın içinde devam et
+                            if (!empty($organizedFields)) {
+                                // Section title'ı al
+                                $sectionTitle = isset($custom_fields['custom_section_title']) ? htmlspecialchars($custom_fields['custom_section_title']) : 'Ek olarak:';
+
+                                // İlk custom field'dan önce ayırıcı ekle
+                                echo '<div style="grid-column: 1 / -1; display: flex; align-items: center; margin: 15px 0 10px 0;">';
+                                echo '<span style="font-weight: 600; color: #2c5aa0; font-size: 14px; white-space: nowrap;">' . $sectionTitle . '</span>';
+                                echo '<div style="flex: 1; height: 1px; background: #ddd; margin-left: 15px;"></div>';
+                                echo '</div>';
+
+                                foreach ($organizedFields as $pair) {
+                                    // Sol kolon
+                                    echo '<div>';
+                                    if (isset($custom_fields[$pair['label1']]) && isset($custom_fields[$pair['value1']])) {
+                                        echo '<div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">';
+                                        echo '<span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;">' . htmlspecialchars($custom_fields[$pair['label1']]) . ':</span>';
+                                        echo '<span style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right;">';
+                                        echo htmlspecialchars($custom_fields[$pair['value1']]);
+                                        echo '</span>';
+                                        echo '</div>';
+                                    }
+                                    echo '</div>';
+
+                                    // Sağ kolon
+                                    echo '<div>';
+                                    if ($pair['label2'] && $pair['value2'] && isset($custom_fields[$pair['label2']]) && isset($custom_fields[$pair['value2']])) {
+                                        echo '<div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">';
+                                        echo '<span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;">' . htmlspecialchars($custom_fields[$pair['label2']]) . ':</span>';
+                                        echo '<span style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right;">';
+                                        echo htmlspecialchars($custom_fields[$pair['value2']]);
+                                        echo '</span>';
+                                        echo '</div>';
+                                    }
                                     echo '</div>';
                                 }
-                                echo '</div>';
-
-                                // Sağ kolon
-                                echo '<div>';
-                                if ($pair['label2'] && $pair['value2'] && isset($custom_fields[$pair['label2']]) && isset($custom_fields[$pair['value2']])) {
-                                    echo '<div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">';
-                                    echo '<span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;">' . htmlspecialchars($custom_fields[$pair['label2']]) . ':</span>';
-                                    echo '<span style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right;">';
-                                    echo htmlspecialchars($custom_fields[$pair['value2']]);
-                                    echo '</span>';
-                                    echo '</div>';
-                                }
-                                echo '</div>';
-
-                                echo '</div>';
                             }
                         }
                     }
                     ?>
+                    </div>
 
                 </div>
                     </div>
@@ -2254,6 +2293,44 @@ function formatPriceWithCurrency($price, $currency) {
         let galleryImages = [];
         let currentImageIndex = 0;
 
+        // Additional costs functionality
+        let additionalCosts = [];
+
+        // Load additional costs from server
+        function loadAdditionalCosts() {
+            const quoteNumber = <?= json_encode($quote['quote_number']) ?>;
+            const quoteId = <?= json_encode($quote['id']) ?>;
+            console.log('loadAdditionalCosts called for quote:', quoteNumber, 'ID:', quoteId);
+
+
+            fetch(`api/get-additional-costs.php?quote_id=${quoteId}`)
+            .then(response => {
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success && data.costs && data.costs.length > 0) {
+                    additionalCosts = data.costs.map(cost => ({
+                        id: cost.id,
+                        name: cost.name || cost.description.split(' - ')[0] || 'Ek Maliyet',
+                        description: cost.description || '',
+                        amount: parseFloat(cost.amount),
+                        currency: cost.currency || '<?= $currency ?>'
+                    }));
+                    renderAdditionalCostsTable();
+                } else {
+                    renderAdditionalCostsTable();
+                }
+            })
+            .catch(error => {
+                console.error('Error loading costs:', error);
+                renderAdditionalCostsTable();
+            });
+        }
+
         function showGalleryModal(modeId, modeName) {
             const isEnglish = <?= json_encode($is_english) ?>;
             const referenceImagesText = isEnglish ? 'Reference Images' : 'Referans Resimleri';
@@ -2428,6 +2505,64 @@ function formatPriceWithCurrency($price, $currency) {
             }
         }
 
+        // Render additional costs table
+        function renderAdditionalCostsTable() {
+            const table = document.getElementById('additionalCostsTable');
+
+            if (additionalCosts.length === 0) {
+                table.innerHTML = '';
+                return;
+            }
+
+            let html = '<table style="width: 100%; border-collapse: collapse; margin-bottom: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-radius: 8px; overflow: hidden;">';
+
+            additionalCosts.forEach((cost, index) => {
+                const formattedAmount = formatPrice(cost.amount, cost.currency);
+                html += `
+                    <tr>
+                        <td style="padding: 8px 16px; border: none; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); font-weight: 500; font-size: 12px; width: 220px; position: relative; color: #155724; border-right: 1px solid rgba(255,255,255,0.3);">
+                            <div style="cursor: default;">
+                                <span>${cost.name}</span>
+                            </div>
+                            ${cost.description ? `<div style="cursor: default; font-size: 10px; color: #0a4622; margin-top: 3px; font-style: italic;">
+                                <span>${cost.description}</span>
+                            </div>` : ''}
+                        </td>
+                        <td style="padding: 8px 16px; border: none; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); text-align: right; font-size: 16px; font-weight: 600; color: #155724;">
+                            <span>${formattedAmount}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += '</table>';
+            table.innerHTML = html;
+        }
+
+        // Format price with currency
+        function formatPrice(amount, currency) {
+            const formatted = new Intl.NumberFormat('tr-TR', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            }).format(amount);
+
+            switch(currency) {
+                case 'USD':
+                    return '$' + formatted;
+                case 'EUR':
+                    return '€' + formatted;
+                case 'TL':
+                default:
+                    return formatted + ' TL';
+            }
+        }
+
+        // Auto-load additional costs when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded triggered - loading additional costs');
+            loadAdditionalCosts();
+        });
+
     </script>
 
     <!-- JavaScript Libraries -->
@@ -2452,44 +2587,6 @@ function formatPriceWithCurrency($price, $currency) {
                 console.error('Error loading costs:', error);
                 renderAdditionalCostsTable();
             });
-        }
-
-        // Render additional costs table
-        function renderAdditionalCostsTable() {
-            const table = document.getElementById('additionalCostsTable');
-
-            if (additionalCosts.length === 0) {
-                table.innerHTML = '';
-                return;
-            }
-
-                        let html = '<table style="width: 100%; border-collapse: collapse; margin-bottom: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-radius: 8px; overflow: hidden;">';
-
-            additionalCosts.forEach((cost, index) => {
-                const formattedAmount = formatPrice(cost.amount, cost.currency);
-                html += `
-                    <tr>
-                        <td style="padding: 8px 16px; border: none; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); font-weight: 500; font-size: 12px; width: 220px; position: relative; color: #155724; border-right: 1px solid rgba(255,255,255,0.3);">
-                            <div  style="cursor: default;" >
-                                <span id="costNameDisplay_${index}">${cost.name}</span>
-                                <input type="text" id="costNameEdit_${index}" style="display: none; width: 90%; border: none; background: transparent; font-weight: 500; color: #155724; font-size: 12px;" value="${cost.name}" onblur="saveCostName(${index})" onkeypress="handleCostNameKeypress(event, ${index})">
-                            </div>
-                            <div  style="cursor: default; font-size: 10px; color: #0a4622; margin-top: 3px; font-style: italic; min-height: 12px;" >
-                                <span id="costDescDisplay_${index}">${cost.description || 'Açıklama ekleyin...'}</span>
-                                <input type="text" id="costDescEdit_${index}" style="display: none; width: 90%; border: none; background: transparent; font-size: 10px; color: #0a4622; font-style: italic;" value="${cost.description}" onblur="saveCostDescription(${index})" onkeypress="handleCostDescKeypress(event, ${index})" placeholder="Açıklama girin...">
-                            </div>
-                        </td>
-                        <td style="padding: 8px 16px; border: none; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); text-align: right; font-size: 16px; font-weight: 600; color: #155724; position: relative;">
-                            <span  style="cursor: default;" >${formattedAmount}</span>
-                            <input type="text" id="costAmountEdit_${index}" style="display: none; width: 90%; text-align: right; border: none; background: transparent; font-size: 16px; font-weight: 600; color: #155724;" value="${cost.amount}" onblur="saveCostAmount(${index})" onkeypress="handleCostAmountKeypress(event, ${index})">
-                            <button onclick="removeCost(${index})" style="position: absolute; right: 4px; top: 4px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: default; line-height: 1;" title="Sil">×</button>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            html += '</table>';
-            table.innerHTML = html;
         }
 
                 // Add new cost
@@ -3199,6 +3296,20 @@ function formatPriceWithCurrency($price, $currency) {
                 }
             });
         });
+
+        function testAdditionalCosts() {
+            console.log('Testing additional costs API...');
+            fetch('api/test-additional-costs.php')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Test API response:', data);
+                alert('Test sonuçları console\'da - F12 açın');
+            })
+            .catch(error => {
+                console.error('Test API error:', error);
+                alert('Test hatası: ' + error.message);
+            });
+        }
 
     </script>
 

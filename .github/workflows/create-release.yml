@@ -1,0 +1,122 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 2.0.1)'
+        required: true
+        type: string
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: zip, mbstring
+
+    - name: Get version
+      id: get_version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION=${GITHUB_REF#refs/tags/v}
+        fi
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+
+    - name: Update version file
+      run: |
+        echo "${{ steps.get_version.outputs.VERSION }}" > version.txt
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add version.txt
+        git diff --staged --quiet || git commit -m "Update version to ${{ steps.get_version.outputs.VERSION }}"
+
+    - name: Create release package
+      run: |
+        # Geçici dizin oluştur
+        mkdir -p release-package
+
+        # Dosyaları kopyala (uploads, backups, vb. hariç)
+        rsync -av --exclude='.git' \
+                  --exclude='node_modules' \
+                  --exclude='vendor' \
+                  --exclude='uploads/*' \
+                  --exclude='backups/*' \
+                  --exclude='updates/*' \
+                  --exclude='tools/auto-update.log' \
+                  --exclude='config/database.php' \
+                  --exclude='*.log' \
+                  --exclude='*.backup.*' \
+                  --exclude='release-package' \
+                  --exclude='.github' \
+                  . release-package/
+
+        # Örnek database.php oluştur
+        cp config/database.php release-package/config/database.example.php
+
+        # ZIP oluştur
+        cd release-package
+        zip -r ../erhan-nakliye-teklif-v${{ steps.get_version.outputs.VERSION }}.zip .
+        cd ..
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        echo "# Changelog" > CHANGELOG.md
+        echo "" >> CHANGELOG.md
+
+        # Son tag'den bu yana olan değişiklikleri al
+        if git describe --tags --abbrev=0 HEAD^ 2>/dev/null; then
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^)
+          echo "## Changes since $PREV_TAG" >> CHANGELOG.md
+          git log $PREV_TAG..HEAD --pretty=format:"- %s" >> CHANGELOG.md
+        else
+          echo "## Initial Release" >> CHANGELOG.md
+          echo "- İlk sürüm" >> CHANGELOG.md
+        fi
+
+        # Migration dosyalarını listele
+        echo "" >> CHANGELOG.md
+        echo "## Migrations" >> CHANGELOG.md
+        if ls setup/*.sql 2>/dev/null; then
+          for migration in setup/*.sql; do
+            echo "- $(basename $migration)" >> CHANGELOG.md
+          done
+        else
+          echo "- No migrations in this release" >> CHANGELOG.md
+        fi
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.get_version.outputs.VERSION }}
+        name: Release v${{ steps.get_version.outputs.VERSION }}
+        body_path: CHANGELOG.md
+        draft: false
+        prerelease: false
+        files: |
+          erhan-nakliye-teklif-v${{ steps.get_version.outputs.VERSION }}.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Push version update
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ github.ref_name }}
+        tags: false
