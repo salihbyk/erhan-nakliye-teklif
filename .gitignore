@@ -4,6 +4,7 @@ tools/auto-update-config.json
 
 # Upload dizinleri
 uploads/
+uploads/editor/
 backups/
 updates/
 

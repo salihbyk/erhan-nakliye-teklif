@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
         item.addEventListener('click', function(e) {
             // Add loading state
             const icon = this.querySelector('.nav-icon i');
+            if (!icon) return;
             const originalIcon = icon.className;
 
             if (!this.classList.contains('logout-item')) {

@@ -231,39 +231,359 @@ $messages = getMessages();
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="includes/sidebar.css" rel="stylesheet">
 
-    <style>
-        /* Modern sidebar included via external CSS */
-        .transport-group {
+        <style>
+        /* Minimal ve kibar tasarım */
+        body {
             background: #f8f9fa;
-            border-radius: 12px;
-            padding: 0;
-            margin-bottom: 25px;
-            border-left: 4px solid #007bff;
-            overflow: hidden;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: #2d3748;
+            line-height: 1.6;
         }
-        .template-card {
+
+        .main-content {
+            margin-left: 250px; /* Sidebar width + margin */
+            padding: 20px 30px;
+            min-height: 100vh;
+            background: white;
+            transition: margin-left 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                padding: 15px;
+            }
+        }
+
+        /* Minimal header tasarımı */
+        .page-header {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 24px 0;
+            margin-bottom: 32px;
+        }
+
+        .page-header h1 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 1.875rem;
+            color: #1a202c;
+        }
+
+        .page-header p {
+            margin: 4px 0 0;
+            color: #718096;
+            font-size: 0.875rem;
+        }
+
+        .page-header .btn {
+            background: #4f46e5;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+
+        .page-header .btn:hover {
+            background: #4338ca;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(79, 70, 229, 0.3);
+        }
+
+        .page-header .btn-outline-secondary {
+            background: white;
+            border: 1px solid #d1d5db;
+            color: #374151;
+        }
+
+        .page-header .btn-outline-secondary:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+
+        /* Dinamik renkli card tasarımı */
+        .content-section {
             background: white;
             border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: 2px solid #e2e8f0;
+            margin-bottom: 24px;
+            overflow: hidden;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .section-header {
+            background: #fafbfc;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 16px 20px;
+            transition: border-bottom-color 0.3s ease;
+        }
+
+        .section-header h4 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 1.125rem;
+            color: #1a202c;
+        }
+
+        /* Dinamik başlık */
+        .dynamic-header {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .dynamic-header-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .dynamic-header-text h5 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 1rem;
+            color: #1f2937;
+        }
+
+        .dynamic-header-text p {
+            margin: 0;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        /* Dinamik renk sınıfları */
+
+        /* İthalat - Mavi tema */
+        .theme-import .content-section {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.1);
+        }
+
+        .theme-import .section-header {
+            border-bottom-color: #3b82f6;
+        }
+
+        .theme-import .dynamic-header {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.1);
+        }
+
+        /* İhracat - Yeşil tema */
+        .theme-export .content-section {
+            border-color: #10b981;
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.1);
+        }
+
+        .theme-export .section-header {
+            border-bottom-color: #10b981;
+        }
+
+        .theme-export .dynamic-header {
+            border-color: #10b981;
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.1);
+        }
+
+        /* Karayolu - Turuncu tema */
+        .theme-karayolu .template-card:hover {
+            border-color: #f97316;
+            box-shadow: 0 2px 8px rgba(249, 115, 22, 0.15);
+        }
+
+        .theme-karayolu .add-template-card:hover {
+            border-color: #f97316;
+            background: #fff7ed;
+        }
+
+                /* Denizyolu - Mavi tema */
+        .theme-denizyolu .template-card:hover,
+        .theme-deniz .template-card:hover,
+        .theme-deniz-yolu .template-card:hover {
+            border-color: #0ea5e9;
+            box-shadow: 0 2px 8px rgba(14, 165, 233, 0.15);
+        }
+
+        .theme-denizyolu .add-template-card:hover,
+        .theme-deniz .add-template-card:hover,
+        .theme-deniz-yolu .add-template-card:hover {
+            border-color: #0ea5e9;
+            background: #f0f9ff;
+        }
+
+                /* Havayolu - Mor tema */
+        .theme-havayolu .template-card:hover,
+        .theme-hava .template-card:hover,
+        .theme-hava-yolu .template-card:hover {
+            border-color: #8b5cf6;
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.15);
+        }
+
+        .theme-havayolu .add-template-card:hover,
+        .theme-hava .add-template-card:hover,
+        .theme-hava-yolu .add-template-card:hover {
+            border-color: #8b5cf6;
+            background: #faf5ff;
+        }
+
+        /* Referans resimi kartları için dinamik renkler */
+        .theme-import .card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+
+        .theme-export .card:hover {
+            border-color: #10b981;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+        }
+
+        .section-body {
+            padding: 20px;
+        }
+
+        /* Renkli transport mode tabs */
+        .transport-mode-tabs {
+            border: none;
+            margin-bottom: 20px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            padding: 6px;
+        }
+
+        .transport-mode-tabs .nav-link {
+            border: none;
+            border-radius: 6px;
+            margin-right: 6px;
+            padding: 10px 16px;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.875rem;
+            background: transparent;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        /* Karayolu - Turuncu */
+        .transport-mode-tabs .nav-link[data-mode*="karayolu"].active {
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            color: white;
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .transport-mode-tabs .nav-link[data-mode*="karayolu"]:hover:not(.active) {
+            background: #fed7aa;
+            color: #ea580c;
+        }
+
+        /* Denizyolu - Mavi */
+        .transport-mode-tabs .nav-link[data-mode*="deniz"].active,
+        .transport-mode-tabs .nav-link[data-mode*="yolu"].active {
+            background: linear-gradient(135deg, #0ea5e9, #0284c7);
+            color: white;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .transport-mode-tabs .nav-link[data-mode*="deniz"]:hover:not(.active),
+        .transport-mode-tabs .nav-link[data-mode*="yolu"]:hover:not(.active) {
+            background: #bae6fd;
+            color: #0284c7;
+        }
+
+        /* Havayolu - Mor */
+        .transport-mode-tabs .nav-link[data-mode*="hava"].active {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .transport-mode-tabs .nav-link[data-mode*="hava"]:hover:not(.active) {
+            background: #ddd6fe;
+            color: #7c3aed;
+        }
+
+        /* Varsayılan aktif stil */
+        .transport-mode-tabs .nav-link.active {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: white;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .transport-mode-tabs .nav-link:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.8);
+            color: #475569;
+        }
+
+        .transport-mode-tabs .nav-link i {
+            margin-right: 8px;
+            font-size: 0.875rem;
+        }
+
+        /* Dinamik renkli template card */
+        .template-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 12px;
             transition: all 0.3s ease;
         }
+
         .template-card:hover {
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-            transform: translateY(-2px);
+            border-color: #d1d5db;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
         }
+        /* Minimal badge tasarımı */
+        .language-badge, .currency-badge, .trade-type-badge {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+            margin-right: 6px;
+        }
+
         .language-badge {
-            font-size: 0.75rem;
-            padding: 4px 8px;
+            background: #dbeafe;
+            color: #1e40af;
         }
+
         .currency-badge {
-            font-size: 0.75rem;
-            padding: 4px 8px;
+            background: #fef3c7;
+            color: #92400e;
         }
+
         .trade-type-badge {
-            font-size: 0.75rem;
-            padding: 4px 8px;
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        /* Minimal template preview */
+        .template-preview {
+            max-height: 120px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 12px;
+            background: #f9fafb;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            margin-bottom: 12px;
         }
 
         /* Modal ve Editör Düzenlemeleri */
@@ -305,96 +625,218 @@ $messages = getMessages();
             margin-top: 2px;
         }
 
-        /* Trade Type Tabs */
+        /* Renkli Trade Type Tabs */
         .trade-type-tabs {
             border: none;
-            margin-bottom: 30px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #e2e8f0;
         }
 
         .trade-type-tabs .nav-link {
-            border: 2px solid #e9ecef;
-            border-radius: 10px !important;
-            margin-right: 10px;
-            padding: 12px 24px;
-            color: #6c757d;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            margin-right: 8px;
+            padding: 14px 20px;
+            color: #6b7280;
             font-weight: 600;
+            font-size: 0.875rem;
+            background: #f8f9fa;
+            position: relative;
             transition: all 0.3s ease;
-            background: white;
+            border: 2px solid transparent;
         }
 
-        .trade-type-tabs .nav-link.active {
-            background: linear-gradient(135deg, #007bff, #0056b3);
-            border-color: #007bff;
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,123,255,0.3);
+        .trade-type-tabs .nav-link:before {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 0;
+            height: 3px;
+            transition: width 0.3s ease;
         }
 
-        .trade-type-tabs .nav-link:hover:not(.active) {
-            border-color: #007bff;
-            color: #007bff;
-            transform: translateY(-1px);
+        /* İthalat tab - Mavi */
+        .trade-type-tabs .nav-link[data-trade="import"]:before {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        }
+
+        .trade-type-tabs .nav-link[data-trade="import"].active {
+            color: #1d4ed8;
+            background: #dbeafe;
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+
+        .trade-type-tabs .nav-link[data-trade="import"]:hover:not(.active) {
+            color: #2563eb;
+            background: #eff6ff;
+        }
+
+        /* İhracat tab - Yeşil */
+        .trade-type-tabs .nav-link[data-trade="export"]:before {
+            background: linear-gradient(135deg, #10b981, #047857);
+        }
+
+        .trade-type-tabs .nav-link[data-trade="export"].active {
+            color: #047857;
+            background: #d1fae5;
+            border-color: #10b981;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+        }
+
+        .trade-type-tabs .nav-link[data-trade="export"]:hover:not(.active) {
+            color: #059669;
+            background: #ecfdf5;
+        }
+
+        .trade-type-tabs .nav-link.active:before {
+            width: 100%;
         }
 
         .trade-type-tabs .nav-link i {
             margin-right: 8px;
+            font-size: 1rem;
         }
+        /* Modern template preview */
         .template-preview {
             max-height: 200px;
             overflow-y: auto;
-            border: 1px solid #e9ecef;
-            border-radius: 6px;
-            padding: 10px;
-            background: #f8f9fa;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            background: linear-gradient(135deg, #f8f9ff 0%, #fff5f5 100%);
             font-size: 0.9em;
+            line-height: 1.6;
         }
+
+        /* Minimal add template card */
         .add-template-card {
-            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-            border: 2px dashed #90caf9;
-            border-radius: 8px;
-            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            min-height: 140px;
+            padding: 20px;
             text-align: center;
+            border-radius: 6px;
+            border: 2px dashed #d1d5db;
+            background: #fafbfc;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
+
         .add-template-card:hover {
-            background: linear-gradient(135deg, #bbdefb 0%, #e1bee7 100%);
-            border-color: #64b5f6;
+            border-color: #4f46e5;
+            background: #f8faff;
         }
+
+        .add-template-card i {
+            font-size: 1.5rem;
+            color: #9ca3af;
+            margin-bottom: 4px;
+        }
+
+        .add-template-card:hover i {
+            color: #4f46e5;
+        }
+
+        .add-template-card h6 {
+            margin: 0;
+            font-weight: 500;
+            font-size: 0.875rem;
+            color: #374151;
+        }
+
+        .add-template-card small {
+            margin-top: 2px;
+            display: block;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+        /* Modern group header */
         .group-header {
             display: flex;
             align-items: center;
             margin-bottom: 0;
-            padding: 20px;
-            border-bottom: 2px solid #dee2e6;
+            padding: 25px 30px;
+            border-bottom: none;
             cursor: pointer;
-            transition: background-color 0.3s ease;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            position: relative;
+            overflow: hidden;
         }
+
+        .group-header:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            transition: all 0.4s ease;
+        }
+
+        .group-header:hover:before {
+            left: 0;
+        }
+
         .group-header:hover {
-            background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+            transform: translateX(5px);
         }
+
         .group-header i {
-            font-size: 2rem;
-            margin-right: 15px;
-            color: #007bff;
+            font-size: 2.5rem;
+            margin-right: 20px;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
+
         .group-header h4 {
             margin: 0;
-            color: #495057;
+            color: white;
             flex-grow: 1;
+            font-weight: 500;
+            font-size: 1.4rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
+
         .group-toggle {
-            font-size: 1.2rem;
-            color: #6c757d;
-            transition: transform 0.3s ease;
+            font-size: 1.4rem;
+            color: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
         }
+
+        .group-toggle:hover {
+            color: white;
+            transform: scale(1.1);
+        }
+        /* Modern group content */
         .group-content {
-            padding: 20px;
+            padding: 30px;
             display: none !important;
+            background: white;
+            animation: slideDown 0.3s ease-out;
         }
+
         .group-content.show {
             display: block !important;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         #editor {
             height: 300px;
@@ -552,15 +994,18 @@ $messages = getMessages();
 
         <!-- Ana İçerik -->
         <main class="main-content">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2"><i class="fas fa-truck"></i> Taşıma Modları Yönetimi</h1>
-                    <div class="btn-toolbar mb-2 mb-md-0">
+                <div class="page-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1><i class="fas fa-truck me-3"></i> Taşıma Modları Yönetimi</h1>
+                        <p class="mb-0 opacity-75">Teklif şablonlarınızı ve referans görsellerinizi yönetin</p>
+                    </div>
+                    <div class="btn-toolbar">
                         <div class="btn-group me-2">
-                            <button type="button" class="btn btn-primary" onclick="showAddTemplateModal()">
-                                <i class="fas fa-plus"></i> Yeni Şablon
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" onclick="location.reload()">
-                                <i class="fas fa-sync-alt"></i> Yenile
+                            <a href="edit-template.php" class="btn">
+                                <i class="fas fa-plus me-2"></i> Yeni Şablon
+                            </a>
+                            <button type="button" class="btn" onclick="location.reload()">
+                                <i class="fas fa-sync-alt me-2"></i> Yenile
                             </button>
                         </div>
                     </div>
@@ -597,264 +1042,279 @@ $messages = getMessages();
                 <?php unset($_SESSION['error_message']); endif; ?>
 
                 <!-- Teklif Şablonları Bölümü -->
-                <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h4 class="mb-0"><i class="fas fa-file-alt"></i> Teklif Şablonları</h4>
+                <div class="content-section">
+                    <div class="section-header">
+                        <h4><i class="fas fa-file-alt me-2"></i> Teklif Şablonları</h4>
                     </div>
-                    <div class="card-body">
+                    <div class="section-body">
                         <!-- Trade Type Tabs -->
                         <ul class="nav trade-type-tabs" id="tradeTypeTabs" role="tablist">
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="import-tab" data-bs-toggle="tab" data-bs-target="#import-content" type="button" role="tab">
-                                    <i class="fas fa-arrow-down"></i> İthalat Şablonları
+                                <button class="nav-link active" id="import-tab" data-bs-toggle="tab" data-bs-target="#import-content" type="button" role="tab" data-trade="import">
+                                    <i class="fas fa-download"></i> İthalat
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="export-tab" data-bs-toggle="tab" data-bs-target="#export-content" type="button" role="tab">
-                                    <i class="fas fa-arrow-up"></i> İhracat Şablonları
+                                <button class="nav-link" id="export-tab" data-bs-toggle="tab" data-bs-target="#export-content" type="button" role="tab" data-trade="export">
+                                    <i class="fas fa-upload"></i> İhracat
                                 </button>
                             </li>
                         </ul>
 
-                <!-- Tab Content -->
-                <div class="tab-content" id="tradeTypeTabContent">
-                    <!-- İthalat Tab -->
-                    <div class="tab-pane fade show active" id="import-content" role="tabpanel">
-                        <?php if (empty($grouped_templates['import'])): ?>
-                        <div class="text-center py-5">
-                            <i class="fas fa-arrow-down fa-4x text-muted mb-3"></i>
-                            <h4 class="text-muted">Henüz ithalat şablonu oluşturulmamış</h4>
-                            <p class="text-muted">İlk ithalat şablonunuzu oluşturmak için "Yeni Şablon" butonuna tıklayın.</p>
-                            <button type="button" class="btn btn-primary" onclick="showAddTemplateModal('', 'import')">
-                                <i class="fas fa-plus"></i> İthalat Şablonu Oluştur
-                            </button>
-                        </div>
-                        <?php else: ?>
-                            <?php foreach ($grouped_templates['import'] as $mode_name => $group): ?>
-                            <div class="transport-group">
-                                <div class="group-header" onclick="toggleGroup(this)">
-                                    <i class="<?= htmlspecialchars($group['icon']) ?>"></i>
-                                    <h4><?= htmlspecialchars($mode_name) ?> - İthalat</h4>
-                                    <i class="fas fa-chevron-down group-toggle"></i>
-                                </div>
-
-                                <div class="group-content">
-                                    <div class="row">
-                                        <?php foreach ($group['templates'] as $template): ?>
-                                <div class="col-lg-6 col-xl-4 mb-3">
-                                    <div class="template-card">
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <h6 class="mb-0"><?= htmlspecialchars($template['template_name']) ?></h6>
-                                            <div>
-                                                <?php if ($template['is_active']): ?>
-                                                    <span class="badge bg-success">Aktif</span>
-                                                <?php else: ?>
-                                                    <span class="badge bg-secondary">Pasif</span>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-
-                                        <div class="mb-2">
-                                            <span class="language-badge badge bg-info me-1">
-                                                <?= $template['language'] == 'tr' ? 'Türkçe' : 'English' ?>
-                                            </span>
-                                            <span class="currency-badge badge bg-warning text-dark">
-                                                <?= htmlspecialchars($template['currency']) ?>
-                                            </span>
-                                            <span class="trade-type-badge badge bg-<?= $template['trade_type'] == 'import' ? 'primary' : 'secondary' ?>">
-                                                <?= $template['trade_type'] == 'import' ? 'İthalat' : 'İhracat' ?>
-                                            </span>
-                                        </div>
-
-                                        <div class="template-preview mb-3">
-                                            <?= $template['services_content'] ?: '<em class="text-muted">Hizmetler içeriği henüz eklenmemiş</em>' ?>
-                                        </div>
-
-                                        <div class="d-flex gap-2">
-                                            <button class="btn btn-sm btn-outline-primary flex-fill"
-                                                    onclick="editTemplate(<?= $template['id'] ?>)">
-                                                <i class="fas fa-edit"></i> Düzenle
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-danger"
-                                                    onclick="deleteTemplate(<?= $template['id'] ?>, '<?= htmlspecialchars($template['template_name']) ?>')">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <?php endforeach; ?>
-
-                                <!-- Yeni Şablon Ekleme Kartı -->
-                                <div class="col-lg-6 col-xl-4 mb-3">
-                                    <div class="add-template-card" onclick="showAddTemplateModal('<?= htmlspecialchars($mode_name) ?>', 'import')">
-                                        <i class="fas fa-plus fa-2x text-primary mb-2"></i>
-                                        <h6 class="text-primary">Yeni İthalat Şablonu</h6>
-                                        <small class="text-muted"><?= htmlspecialchars($mode_name) ?> için</small>
-                                    </div>
-                                </div>
+                        <!-- Dinamik Header -->
+                        <div class="dynamic-header" id="dynamicHeader">
+                            <div class="dynamic-header-icon" id="dynamicIcon">
+                                <i class="fas fa-download"></i>
+                            </div>
+                            <div class="dynamic-header-text">
+                                <h5 id="dynamicTitle">İthalat Şablonları</h5>
+                                <p id="dynamicSubtitle">Şablon seçmek için yukarıdaki modlardan birini seçin</p>
                             </div>
                         </div>
-                    </div>
-                    <?php endforeach; ?>
-                        <?php endif; ?>
-                    </div>
 
-                    <!-- İhracat Tab -->
-                    <div class="tab-pane fade" id="export-content" role="tabpanel">
-                        <?php if (empty($grouped_templates['export'])): ?>
-                        <div class="text-center py-5">
-                            <i class="fas fa-arrow-up fa-4x text-muted mb-3"></i>
-                            <h4 class="text-muted">Henüz ihracat şablonu oluşturulmamış</h4>
-                            <p class="text-muted">İlk ihracat şablonunuzu oluşturmak için "Yeni Şablon" butonuna tıklayın.</p>
-                            <button type="button" class="btn btn-primary" onclick="showAddTemplateModal('', 'export')">
-                                <i class="fas fa-plus"></i> İhracat Şablonu Oluştur
-                            </button>
-                        </div>
-                        <?php else: ?>
-                            <?php foreach ($grouped_templates['export'] as $mode_name => $group): ?>
-                            <div class="transport-group">
-                                <div class="group-header" onclick="toggleGroup(this)">
-                                    <i class="<?= htmlspecialchars($group['icon']) ?>"></i>
-                                    <h4><?= htmlspecialchars($mode_name) ?> - İhracat</h4>
-                                    <i class="fas fa-chevron-down group-toggle"></i>
+                        <!-- Tab Content -->
+                        <div class="tab-content" id="tradeTypeTabContent">
+                            <!-- İthalat Tab -->
+                            <div class="tab-pane fade show active" id="import-content" role="tabpanel">
+                                <?php if (empty($grouped_templates['import'])): ?>
+                                <div class="text-center py-5">
+                                    <i class="fas fa-download fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">Henüz ithalat şablonu oluşturulmamış</h5>
+                                    <p class="text-muted mb-4">İlk ithalat şablonunuzu oluşturmak için aşağıdaki butona tıklayın.</p>
+                                    <a href="edit-template.php?trade_type=import" class="btn btn-primary">
+                                        <i class="fas fa-plus me-2"></i> İthalat Şablonu Oluştur
+                                    </a>
                                 </div>
+                                <?php else: ?>
+                                                                        <!-- Transport Mode Tabs -->
+                                    <ul class="nav transport-mode-tabs" id="importModeTabs" role="tablist">
+                                        <?php $first = true; foreach ($grouped_templates['import'] as $mode_name => $group): ?>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link <?= $first ? 'active' : '' ?>"
+                                                    id="import-<?= htmlspecialchars(strtolower(str_replace(' ', '-', $mode_name))) ?>-tab"
+                                                    data-bs-toggle="tab"
+                                                    data-bs-target="#import-<?= htmlspecialchars(strtolower(str_replace(' ', '-', $mode_name))) ?>"
+                                                    type="button" role="tab"
+                                                    data-mode="<?= htmlspecialchars(strtolower($mode_name)) ?>"
+                                                    data-mode-name="<?= htmlspecialchars($mode_name) ?>"
+                                                    data-icon="<?= htmlspecialchars($group['icon']) ?>">
+                                                <i class="<?= htmlspecialchars($group['icon']) ?>"></i> <?= htmlspecialchars($mode_name) ?>
+                                            </button>
+                                        </li>
+                                        <?php $first = false; endforeach; ?>
+                                    </ul>
 
-                                <div class="group-content">
-                                    <div class="row">
-                                        <?php foreach ($group['templates'] as $template): ?>
-                                <div class="col-lg-6 col-xl-4 mb-3">
-                                    <div class="template-card">
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <h6 class="mb-0"><?= htmlspecialchars($template['template_name']) ?></h6>
-                                            <div>
-                                                <?php if ($template['is_active']): ?>
-                                                    <span class="badge bg-success">Aktif</span>
-                                                <?php else: ?>
-                                                    <span class="badge bg-secondary">Pasif</span>
-                                                <?php endif; ?>
+                                    <!-- Transport Mode Content -->
+                                    <div class="tab-content" id="importModeTabContent">
+                                        <?php $first = true; foreach ($grouped_templates['import'] as $mode_name => $group): ?>
+                                        <div class="tab-pane fade <?= $first ? 'show active' : '' ?>"
+                                             id="import-<?= htmlspecialchars(strtolower(str_replace(' ', '-', $mode_name))) ?>"
+                                             role="tabpanel">
+
+                                            <div class="row">
+                                                <?php foreach ($group['templates'] as $template): ?>
+                                                <div class="col-lg-6 col-xl-4 mb-3">
+                                                    <div class="template-card">
+                                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                                            <h6 class="mb-0 fw-500"><?= htmlspecialchars($template['template_name']) ?></h6>
+                                                            <span class="badge <?= $template['is_active'] ? 'bg-success' : 'bg-secondary' ?>" style="font-size: 0.7rem;">
+                                                                <?= $template['is_active'] ? 'Aktif' : 'Pasif' ?>
+                                                            </span>
+                                                        </div>
+
+                                                        <div class="mb-2">
+                                                            <span class="language-badge">
+                                                                <?= $template['language'] == 'tr' ? 'TR' : 'EN' ?>
+                                                            </span>
+                                                            <span class="currency-badge">
+                                                                <?= htmlspecialchars($template['currency']) ?>
+                                                            </span>
+                                                        </div>
+
+                                                        <div class="template-preview mb-3">
+                                                            <?= $template['services_content'] ?: '<em class="text-muted">İçerik henüz eklenmemiş</em>' ?>
+                                                        </div>
+
+                                                        <div class="d-flex gap-2">
+                                                            <a href="edit-template.php?id=<?= $template['id'] ?>"
+                                                               class="btn btn-sm btn-outline-primary flex-fill">
+                                                                <i class="fas fa-edit"></i> Düzenle
+                                                            </a>
+                                                            <button class="btn btn-sm btn-outline-danger"
+                                                                    onclick="deleteTemplate(<?= $template['id'] ?>, '<?= htmlspecialchars($template['template_name']) ?>')">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <?php endforeach; ?>
+
+                                                <!-- Yeni Şablon Ekleme Kartı -->
+                                                <div class="col-lg-6 col-xl-4 mb-3">
+                                                    <a href="edit-template.php?mode=<?= rawurlencode($mode_name) ?>&trade_type=import"
+                                                       class="add-template-card text-decoration-none">
+                                                        <i class="fas fa-plus"></i>
+                                                        <h6>Yeni Şablon</h6>
+                                                        <small><?= htmlspecialchars($mode_name) ?> için</small>
+                                                    </a>
+                                                </div>
                                             </div>
                                         </div>
-
-                                        <div class="mb-2">
-                                            <span class="language-badge badge bg-info me-1">
-                                                <?= $template['language'] == 'tr' ? 'Türkçe' : 'English' ?>
-                                            </span>
-                                            <span class="currency-badge badge bg-warning text-dark">
-                                                <?= htmlspecialchars($template['currency']) ?>
-                                            </span>
-                                            <span class="trade-type-badge badge bg-<?= $template['trade_type'] == 'import' ? 'primary' : 'secondary' ?>">
-                                                <?= $template['trade_type'] == 'import' ? 'İthalat' : 'İhracat' ?>
-                                            </span>
-                                        </div>
-
-                                        <div class="template-preview mb-3">
-                                            <?= $template['services_content'] ?: '<em class="text-muted">Hizmetler içeriği henüz eklenmemiş</em>' ?>
-                                        </div>
-
-                                        <div class="d-flex gap-2">
-                                            <button class="btn btn-sm btn-outline-primary flex-fill"
-                                                    onclick="editTemplate(<?= $template['id'] ?>)">
-                                                <i class="fas fa-edit"></i> Düzenle
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-danger"
-                                                    onclick="deleteTemplate(<?= $template['id'] ?>, '<?= htmlspecialchars($template['template_name']) ?>')">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
+                                        <?php $first = false; endforeach; ?>
                                     </div>
-                                </div>
-                                <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
 
-                                <!-- Yeni Şablon Ekleme Kartı -->
-                                <div class="col-lg-6 col-xl-4 mb-3">
-                                    <div class="add-template-card" onclick="showAddTemplateModal('<?= htmlspecialchars($mode_name) ?>', 'export')">
-                                        <i class="fas fa-plus fa-2x text-primary mb-2"></i>
-                                        <h6 class="text-primary">Yeni İhracat Şablonu</h6>
-                                        <small class="text-muted"><?= htmlspecialchars($mode_name) ?> için</small>
-                                    </div>
+                            <!-- İhracat Tab -->
+                            <div class="tab-pane fade" id="export-content" role="tabpanel">
+                                <?php if (empty($grouped_templates['export'])): ?>
+                                <div class="text-center py-5">
+                                    <i class="fas fa-upload fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">Henüz ihracat şablonu oluşturulmamış</h5>
+                                    <p class="text-muted mb-4">İlk ihracat şablonunuzu oluşturmak için aşağıdaki butona tıklayın.</p>
+                                    <a href="edit-template.php?trade_type=export" class="btn btn-primary">
+                                        <i class="fas fa-plus me-2"></i> İhracat Şablonu Oluştur
+                                    </a>
                                 </div>
+                                <?php else: ?>
+                                                                        <!-- Transport Mode Tabs -->
+                                    <ul class="nav transport-mode-tabs" id="exportModeTabs" role="tablist">
+                                        <?php $first = true; foreach ($grouped_templates['export'] as $mode_name => $group): ?>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link <?= $first ? 'active' : '' ?>"
+                                                    id="export-<?= htmlspecialchars(strtolower(str_replace(' ', '-', $mode_name))) ?>-tab"
+                                                    data-bs-toggle="tab"
+                                                    data-bs-target="#export-<?= htmlspecialchars(strtolower(str_replace(' ', '-', $mode_name))) ?>"
+                                                    type="button" role="tab"
+                                                    data-mode="<?= htmlspecialchars(strtolower($mode_name)) ?>"
+                                                    data-mode-name="<?= htmlspecialchars($mode_name) ?>"
+                                                    data-icon="<?= htmlspecialchars($group['icon']) ?>">
+                                                <i class="<?= htmlspecialchars($group['icon']) ?>"></i> <?= htmlspecialchars($mode_name) ?>
+                                            </button>
+                                        </li>
+                                        <?php $first = false; endforeach; ?>
+                                    </ul>
+
+                                    <!-- Transport Mode Content -->
+                                    <div class="tab-content" id="exportModeTabContent">
+                                        <?php $first = true; foreach ($grouped_templates['export'] as $mode_name => $group): ?>
+                                        <div class="tab-pane fade <?= $first ? 'show active' : '' ?>"
+                                             id="export-<?= htmlspecialchars(strtolower(str_replace(' ', '-', $mode_name))) ?>"
+                                             role="tabpanel">
+
+                                            <div class="row">
+                                                <?php foreach ($group['templates'] as $template): ?>
+                                                <div class="col-lg-6 col-xl-4 mb-3">
+                                                    <div class="template-card">
+                                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                                            <h6 class="mb-0 fw-500"><?= htmlspecialchars($template['template_name']) ?></h6>
+                                                            <span class="badge <?= $template['is_active'] ? 'bg-success' : 'bg-secondary' ?>" style="font-size: 0.7rem;">
+                                                                <?= $template['is_active'] ? 'Aktif' : 'Pasif' ?>
+                                                            </span>
+                                                        </div>
+
+                                                        <div class="mb-2">
+                                                            <span class="language-badge">
+                                                                <?= $template['language'] == 'tr' ? 'TR' : 'EN' ?>
+                                                            </span>
+                                                            <span class="currency-badge">
+                                                                <?= htmlspecialchars($template['currency']) ?>
+                                                            </span>
+                                                        </div>
+
+                                                        <div class="template-preview mb-3">
+                                                            <?= $template['services_content'] ?: '<em class="text-muted">İçerik henüz eklenmemiş</em>' ?>
+                                                        </div>
+
+                                                        <div class="d-flex gap-2">
+                                                            <a href="edit-template.php?id=<?= $template['id'] ?>"
+                                                               class="btn btn-sm btn-outline-primary flex-fill">
+                                                                <i class="fas fa-edit"></i> Düzenle
+                                                            </a>
+                                                            <button class="btn btn-sm btn-outline-danger"
+                                                                    onclick="deleteTemplate(<?= $template['id'] ?>, '<?= htmlspecialchars($template['template_name']) ?>')">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <?php endforeach; ?>
+
+                                                <!-- Yeni Şablon Ekleme Kartı -->
+                                                <div class="col-lg-6 col-xl-4 mb-3">
+                                                    <a href="edit-template.php?mode=<?= rawurlencode($mode_name) ?>&trade_type=export"
+                                                       class="add-template-card text-decoration-none">
+                                                        <i class="fas fa-plus"></i>
+                                                        <h6>Yeni Şablon</h6>
+                                                        <small><?= htmlspecialchars($mode_name) ?> için</small>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <?php $first = false; endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
-                    </div>
-                    <?php endforeach; ?>
-                        <?php endif; ?>
-                    </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Referans Resimleri Bölümü -->
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0"><i class="fas fa-images"></i> Referans Resimleri Yönetimi</h4>
-                        <button type="button" class="btn btn-light btn-sm" onclick="showImageUploadModal()">
-                            <i class="fas fa-upload"></i> Resim Yükle
+                <!-- Referans Resimleri Bölümü -->
+                <div class="content-section">
+                    <div class="section-header d-flex justify-content-between align-items-center">
+                        <h4><i class="fas fa-images me-2"></i> Referans Resimleri</h4>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="showImageUploadModal()">
+                            <i class="fas fa-upload me-2"></i> Resim Yükle
                         </button>
                     </div>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted mb-4">
-                        <i class="fas fa-info-circle"></i>
-                        Her taşıma modu için referans görselleri yükleyebilir ve yönetebilirsiniz.
-                        Bu görseller müşteri teklif sayfalarında gösterilir.
-                    </p>
+                    <div class="section-body">
+                        <p class="text-muted mb-4" style="font-size: 0.875rem;">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Her taşıma modu için referans görselleri yükleyebilir ve yönetebilirsiniz.
+                        </p>
 
 
                         <div class="row">
                             <?php foreach ($transportModes as $mode): ?>
                                 <?php if (strtolower($mode['name']) !== 'konteyner'): ?>
-                            <div class="col-lg-3 col-md-6 mb-4">
-                                <div class="card h-100 border-0 shadow-sm">
-                                    <div class="card-header border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                                        <div class="d-flex align-items-center">
-                                            <div class="transport-icon me-3">
-                                                <?php
-                                                $icons = [
-                                                    'karayolu' => 'fa-truck',
-                                                    'denizyolu' => 'fa-ship',
-                                                    'havayolu' => 'fa-plane',
-                                                    'konteyner' => 'fa-shipping-fast'
-                                                ];
-                                                $icon = $icons[$mode['slug']] ?? 'fa-truck';
-                                                ?>
-                                                <i class="fas <?= $icon ?> fa-2x"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-bold"><?= htmlspecialchars($mode['name']) ?></h6>
-                                                <small class="opacity-75"><?= $mode['image_count'] ?> referans görseli</small>
-                                            </div>
+                            <div class="col-lg-3 col-md-6 mb-3">
+                                <div class="card h-100 border" style="border-radius: 8px;">
+                                    <div class="card-body text-center">
+                                        <div class="mb-3">
+                                            <?php
+                                            $icons = [
+                                                'karayolu' => 'fa-truck',
+                                                'denizyolu' => 'fa-ship',
+                                                'havayolu' => 'fa-plane',
+                                                'konteyner' => 'fa-shipping-fast'
+                                            ];
+                                            $icon = $icons[$mode['slug']] ?? 'fa-truck';
+                                            ?>
+                                            <i class="fas <?= $icon ?> fa-2x text-primary"></i>
                                         </div>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="row g-2">
-                                            <div class="col-6">
-                                                <button class="btn btn-outline-primary btn-sm w-100" onclick="viewModeImages(<?= $mode['id'] ?>, '<?= htmlspecialchars($mode['name']) ?>')" title="Görselleri İncele">
-                                                    <i class="fas fa-eye"></i><br>
-                                                    <small>Görüntüle</small>
-                                                </button>
-                                            </div>
-                                            <div class="col-6">
-                                                <button class="btn btn-success btn-sm w-100" onclick="uploadModeImage(<?= $mode['id'] ?>, '<?= htmlspecialchars($mode['slug']) ?>')" title="Yeni Görsel Ekle">
-                                                    <i class="fas fa-plus"></i><br>
-                                                    <small>Ekle</small>
-                                                </button>
-                                            </div>
+                                        <h6 class="card-title mb-1"><?= htmlspecialchars($mode['name']) ?></h6>
+                                        <small class="text-muted d-block mb-3"><?= $mode['image_count'] ?> görsel</small>
+
+                                        <div class="d-grid gap-2">
+                                            <button class="btn btn-outline-primary btn-sm" onclick="viewModeImages(<?= $mode['id'] ?>, '<?= htmlspecialchars($mode['name']) ?>')">
+                                                <i class="fas fa-eye me-1"></i> Görüntüle
+                                            </button>
+                                            <button class="btn btn-primary btn-sm" onclick="uploadModeImage(<?= $mode['id'] ?>, '<?= htmlspecialchars($mode['slug']) ?>')">
+                                                <i class="fas fa-plus me-1"></i> Yeni Ekle
+                                            </button>
                                         </div>
 
-                                        <?php if ($mode['image_count'] > 0): ?>
-                                        <div class="mt-3 text-center">
-                                            <span class="badge bg-success">
-                                                <i class="fas fa-check"></i> Aktif
-                                            </span>
+                                        <div class="mt-3">
+                                            <?php if ($mode['image_count'] > 0): ?>
+                                                <span class="badge bg-success" style="font-size: 0.7rem;">
+                                                    <i class="fas fa-check me-1"></i> Aktif
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="badge bg-warning" style="font-size: 0.7rem;">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i> Görsel Yok
+                                                </span>
+                                            <?php endif; ?>
                                         </div>
-                                        <?php else: ?>
-                                        <div class="mt-3 text-center">
-                                            <span class="badge bg-warning text-dark">
-                                                <i class="fas fa-exclamation-triangle"></i> Görsel Yok
-                                            </span>
-                                        </div>
-                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
@@ -1160,7 +1620,112 @@ $messages = getMessages();
                     }
                 }
             });
+
+            // Dinamik başlık güncellemesi
+            initializeDynamicHeader();
+
+            // İlk tema ayarını yap
+            setTimeout(updateDynamicHeader, 100);
         });
+
+        // Dinamik başlık sistem
+        function initializeDynamicHeader() {
+            // Trade type tab değişikliklerini dinle
+            document.querySelectorAll('#tradeTypeTabs .nav-link').forEach(tab => {
+                tab.addEventListener('shown.bs.tab', function(e) {
+                    setTimeout(updateDynamicHeader, 50);
+                });
+            });
+
+            // Transport mode tab değişikliklerini dinle - hem import hem export için
+            document.addEventListener('shown.bs.tab', function(e) {
+                if (e.target.classList.contains('nav-link') && e.target.closest('.transport-mode-tabs')) {
+                    setTimeout(updateDynamicHeader, 50);
+                }
+            });
+
+            // İlk yükleme
+            updateDynamicHeader();
+        }
+
+                        function updateDynamicHeader() {
+            const activeTradeTab = document.querySelector('#tradeTypeTabs .nav-link.active');
+            const dynamicIcon = document.getElementById('dynamicIcon');
+            const dynamicTitle = document.getElementById('dynamicTitle');
+            const dynamicSubtitle = document.getElementById('dynamicSubtitle');
+
+            if (!activeTradeTab || !dynamicIcon || !dynamicTitle || !dynamicSubtitle) {
+                return;
+            }
+
+            const tradeType = activeTradeTab.getAttribute('data-trade');
+            const tradeText = tradeType === 'import' ? 'İthalat' : 'İhracat';
+            const tradeIcon = tradeType === 'import' ? 'fa-download' : 'fa-upload';
+
+            // Önceki tema sınıflarını temizle
+            document.body.className = document.body.className.replace(/theme-\w+/g, '').trim();
+
+            // Trade type tema sınıfını ekle
+            document.body.classList.add(`theme-${tradeType}`);
+
+            // Aktif mod tabını bul - aktif trade type'a göre
+            let activeModeTab = null;
+
+            // İthalat seçiliyse import mod tablarından aktif olanı bul
+            if (tradeType === 'import') {
+                activeModeTab = document.querySelector('#importModeTabs .nav-link.active');
+            }
+            // İhracat seçiliyse export mod tablarından aktif olanı bul
+            else if (tradeType === 'export') {
+                activeModeTab = document.querySelector('#exportModeTabs .nav-link.active');
+            }
+
+            // Mod renkleri
+            const modeColors = {
+                'karayolu': { bg: 'linear-gradient(135deg, #f97316, #ea580c)', icon: 'fas fa-truck' },
+                'denizyolu': { bg: 'linear-gradient(135deg, #0ea5e9, #0284c7)', icon: 'fas fa-ship' },
+                'deniz': { bg: 'linear-gradient(135deg, #0ea5e9, #0284c7)', icon: 'fas fa-ship' },
+                'deniz-yolu': { bg: 'linear-gradient(135deg, #0ea5e9, #0284c7)', icon: 'fas fa-ship' },
+                'havayolu': { bg: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', icon: 'fas fa-plane' },
+                'hava': { bg: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', icon: 'fas fa-plane' },
+                'hava-yolu': { bg: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', icon: 'fas fa-plane' }
+            };
+
+            // Trade type renkleri
+            const tradeColors = {
+                'import': 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                'export': 'linear-gradient(135deg, #10b981, #047857)'
+            };
+
+            if (activeModeTab) {
+                const modeName = activeModeTab.getAttribute('data-mode-name');
+                const modeKey = activeModeTab.getAttribute('data-mode');
+                const modeIcon = activeModeTab.getAttribute('data-icon');
+
+                // Mod tema sınıfını ekle (boşlukları temizle)
+                const cleanModeKey = modeKey ? modeKey.replace(/\s+/g, '-').toLowerCase() : '';
+                if (cleanModeKey) {
+                    document.body.classList.add(`theme-${cleanModeKey}`);
+                }
+
+                const color = modeColors[cleanModeKey] || modeColors[modeKey] || { bg: tradeColors[tradeType], icon: modeIcon };
+
+                dynamicIcon.style.background = color.bg;
+                dynamicIcon.innerHTML = `<i class="${color.icon}"></i>`;
+                dynamicTitle.textContent = `${tradeText} - ${modeName}`;
+
+                // Template sayısını hesapla
+                const activeContent = document.querySelector(`#${tradeType}-${modeKey.replace(' ', '-')}`);
+                const templateCount = activeContent ? activeContent.querySelectorAll('.template-card:not(.add-template-card)').length : 0;
+
+                dynamicSubtitle.textContent = `${templateCount} şablon bulundu`;
+            } else {
+                dynamicIcon.style.background = tradeColors[tradeType];
+                dynamicIcon.innerHTML = `<i class="fas ${tradeIcon}"></i>`;
+                dynamicTitle.textContent = `${tradeText} Şablonları`;
+                dynamicSubtitle.textContent = 'Şablon seçmek için yukarıdaki modlardan birini seçin';
+            }
+        }
 
         // Rich Text Editor Functions
         function openRichEditor(element, field) {
