@@ -26,6 +26,8 @@ try {
         SELECT q.*, c.first_name, c.last_name, c.email, c.phone, c.company,
                tm.name as transport_name, tm.icon as transport_icon, tm.template,
                qt.services_content as template_services_content, qt.terms_content as template_terms_content, qt.transport_process_content as template_transport_process_content, qt.currency, qt.language,
+               qt.services_title as template_services_title, qt.transport_process_title as template_transport_process_title, qt.terms_title as template_terms_title,
+               qt.dynamic_sections as template_dynamic_sections, qt.section_order as template_section_order,
                cl.name as cost_list_name, cl.file_name as cost_list_file_name, cl.file_path as cost_list_file_path
         FROM quotes q
         JOIN customers c ON q.customer_id = c.id
@@ -1950,210 +1952,159 @@ function formatPriceWithCurrency($price, $currency) {
             <!-- Information Section -->
             <div class="info-side">
 
-        <!-- Services Section -->
-        <div class="form-section" data-section="services">
-            <div class="section-header">
-                <div class="section-label"><?= $t['services'] ?></div>
-                <div class="section-title"></div>
-            </div>
-                    <div class="form-content">
-                        <?php
-                        // Önce quotes tablosundaki services_content'i kontrol et, yoksa template'den al
-                        $services_content = $quote['services_content'] ?? $quote['template_services_content'] ?? '';
-                        if (!empty($services_content)): ?>
-                            <!-- Hizmetler içeriği -->
-                            <?php
-                            // Şablon değişkenlerini değiştir
-                            $services_content = str_replace('{customer_name}', htmlspecialchars($quote['first_name'] . ' ' . $quote['last_name']), $services_content);
-                            $services_content = str_replace('{quote_number}', htmlspecialchars($quote['quote_number']), $services_content);
-                            $services_content = str_replace('{origin}', htmlspecialchars($quote['origin']), $services_content);
-                            $services_content = str_replace('{destination}', htmlspecialchars($quote['destination']), $services_content);
-                            $services_content = str_replace('{weight}', number_format($quote['weight'], 0, ',', '.'), $services_content);
-                            $services_content = str_replace('{volume}', number_format($quote['volume'] ?? 0, 2, ',', '.'), $services_content);
-                            $services_content = str_replace('{pieces}', $quote['pieces'] ?? $t['not_specified'], $services_content);
-                            $services_content = str_replace('{price}', formatPriceWithCurrency($quote['final_price'], $currency), $services_content);
-                            $services_content = str_replace('{valid_until}', formatDate($quote['valid_until']), $services_content);
-                            $services_content = str_replace('{cargo_type}', $quote['cargo_type'] ?? 'Genel', $services_content);
-                            $services_content = str_replace('{trade_type}', $quote['trade_type'] ?? '', $services_content);
-                            $services_content = str_replace('{start_date}', $quote['start_date'] ? formatDate($quote['start_date']) : $t['not_specified'], $services_content);
-                            $services_content = str_replace('{delivery_date}', $quote['delivery_date'] ? formatDate($quote['delivery_date']) : $t['not_specified'], $services_content);
+        <?php
+        // Müşteri görünümünde şablon sırasına göre bölümleri render et
+        $custom_fields = [];
+        if (!empty($quote['custom_fields'])) {
+            $cf = json_decode($quote['custom_fields'], true);
+            if (is_array($cf)) { $custom_fields = $cf; }
+        }
 
-                            echo $services_content;
-                            ?>
-                        <?php endif; ?>
+        $dynamic_sections = [];
+        if (!empty($quote['template_dynamic_sections'])) {
+            $dynamic_sections = json_decode($quote['template_dynamic_sections'], true) ?: [];
+        }
 
-                        <!-- Maliyet Listesi Linki -->
-                        <?php if (!empty($quote['cost_list_name'])): ?>
-                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
-                            <?php if (!empty($quote['cost_list_file_path']) && file_exists($quote['cost_list_file_path'])): ?>
-                                <p><?= $is_english ? 'You can download the detailed cost list' : 'Detaylı maliyet listesini' ?>
-                                   <a href="<?= htmlspecialchars($quote['cost_list_file_path']) ?>"
-                                      target="_blank"
-                                      style="color: #2c5aa0; text-decoration: underline; font-weight: 500;">
-                                      <?= $is_english ? 'from here' : 'buradan indirebilirsiniz' ?>
-                                   </a><?= $is_english ? '.' : '.' ?>
-                                </p>
-                            <?php else: ?>
-                                <p style="color: #666; font-style: italic;">
-                                    <?= $is_english ? 'Detailed cost list:' : 'Detaylı maliyet listesi:' ?>
-                                    <strong><?= htmlspecialchars($quote['cost_list_name']) ?></strong>
-                                    <?= $is_english ? ' (File not available)' : ' (Dosya mevcut değil)' ?>
-                                </p>
-                            <?php endif; ?>
-                        </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
+        $section_order = [];
+        if (!empty($quote['template_section_order'])) {
+            $section_order = json_decode($quote['template_section_order'], true) ?: [];
+        }
+        if (empty($section_order)) {
+            $section_order = ['services','transport','terms'];
+            // Şablonda tanımlı dinamik içerikler varsa sıraya ekle
+            foreach ($dynamic_sections as $k => $v) {
+                if (preg_match('/^dynamic_section_(\d+)_content$/', $k, $m)) {
+                    $section_order[] = 'dynamic_' . $m[1];
+                }
+            }
+        }
 
-                <!-- Transport Process -->
-                <div class="form-section" data-section="transport_process">
-                    <div class="section-header">
-                        <div class="section-label"><?= $is_english ? 'Transport Process' : 'Taşınma Süreci' ?></div>
-                        <div class="section-title"></div>
-                    </div>
-                    <div class="form-content">
-                        <?php
-                        // Önce veritabanından kaydedilmiş transport_process_text'i kontrol et
-                        if (!empty($quote['transport_process_text'])) {
-                            $transport_process_text = $quote['transport_process_text'];
-                        } elseif (!empty($quote['template_transport_process_content'])) {
-                            // Seçilen şablondan içerik al
-                            $transport_process_text = $quote['template_transport_process_content'];
+        foreach ($section_order as $secKey) {
+            if ($secKey === 'services') {
+                // Başlık önceliği: template -> çeviri
+                $services_label = !empty($quote['template_services_title']) ? $quote['template_services_title'] : $t['services'];
+                echo '<div class="form-section" data-section="services">';
+                echo '  <div class="section-header">';
+                echo '    <div class="section-label">' . htmlspecialchars($services_label) . '</div>';
+                echo '    <div class="section-title"></div>';
+                echo '  </div>';
+                echo '  <div class="form-content">';
+                // İçerik: quote override -> template
+                $services_content = $quote['services_content'] ?? $quote['template_services_content'] ?? '';
+                if (!empty($services_content)) {
+                    $services_content = str_replace('{customer_name}', htmlspecialchars($quote['first_name'] . ' ' . $quote['last_name']), $services_content);
+                    $services_content = str_replace('{quote_number}', htmlspecialchars($quote['quote_number']), $services_content);
+                    $services_content = str_replace('{origin}', htmlspecialchars($quote['origin']), $services_content);
+                    $services_content = str_replace('{destination}', htmlspecialchars($quote['destination']), $services_content);
+                    $services_content = str_replace('{weight}', number_format($quote['weight'], 0, ',', '.'), $services_content);
+                    $services_content = str_replace('{volume}', number_format($quote['volume'] ?? 0, 2, ',', '.'), $services_content);
+                    $services_content = str_replace('{pieces}', $quote['pieces'] ?? $t['not_specified'], $services_content);
+                    $services_content = str_replace('{price}', formatPriceWithCurrency($quote['final_price'], $currency), $services_content);
+                    $services_content = str_replace('{valid_until}', formatDate($quote['valid_until']), $services_content);
+                    $services_content = str_replace('{cargo_type}', $quote['cargo_type'] ?? 'Genel', $services_content);
+                    $services_content = str_replace('{trade_type}', $quote['trade_type'] ?? '', $services_content);
+                    $services_content = str_replace('{start_date}', $quote['start_date'] ? formatDate($quote['start_date']) : $t['not_specified'], $services_content);
+                    $services_content = str_replace('{delivery_date}', $quote['delivery_date'] ? formatDate($quote['delivery_date']) : $t['not_specified'], $services_content);
+                    echo $services_content;
+                }
+                // Maliyet listesi linki
+                if (!empty($quote['cost_list_name'])) {
+                    echo '<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">';
+                    if (!empty($quote['cost_list_file_path']) && file_exists($quote['cost_list_file_path'])) {
+                        echo '<p>' . ($is_english ? 'You can download the detailed cost list' : 'Detaylı maliyet listesini') . ' <a href="' . htmlspecialchars($quote['cost_list_file_path']) . '" target="_blank" style="color: #2c5aa0; text-decoration: underline; font-weight: 500;">' . ($is_english ? 'from here' : 'buradan indirebilirsiniz') . '</a>' . ($is_english ? '.' : '.') . '</p>';
+                    } else {
+                        echo '<p style="color: #666; font-style: italic;">' . ($is_english ? 'Detailed cost list:' : 'Detaylı maliyet listesi:') . ' <strong>' . htmlspecialchars($quote['cost_list_name']) . '</strong> ' . ($is_english ? ' (File not available)' : ' (Dosya mevcut değil)') . '</p>';
+                    }
+                    echo '</div>';
+                }
+                echo '  </div>';
+                echo '</div>';
+            } elseif ($secKey === 'transport' || $secKey === 'transport_process') {
+                $trans_label = !empty($quote['template_transport_process_title']) ? $quote['template_transport_process_title'] : ($is_english ? 'Transport Process' : 'Taşınma Süreci');
+                echo '<div class="form-section" data-section="transport_process">';
+                echo '  <div class="section-header">';
+                echo '    <div class="section-label">' . htmlspecialchars($trans_label) . '</div>';
+                echo '    <div class="section-title"></div>';
+                echo '  </div>';
+                echo '  <div class="form-content">';
+                // İçerik önceliği: quote override -> template -> varsayılan
+                if (!empty($quote['transport_process_text'])) {
+                    $transport_process_text = $quote['transport_process_text'];
+                } elseif (!empty($quote['template_transport_process_content'])) {
+                    $transport_process_text = $quote['template_transport_process_content'];
+                } else {
+                    $transport_process_text = '';
+                    $transport_mode_lower = strtolower($quote['transport_name']);
+                    if ($is_english) {
+                        if (strpos($transport_mode_lower, 'karayolu') !== false) {
+                            $transport_process_text = "1-Presentation and mutual signing of the offer,<br>2-Making a 20% down payment of the offer price to the company account and making a definitive registration in our operation program,<br>3-Preparation of customs documents,<br>4-Collection of goods from the loading address,<br>5-Customs clearance of the goods and departure,<br>6-Payment of the remaining balance,<br>7-Customs clearance procedures in the destination country,<br>8-Delivery of goods to the delivery address.";
+                        } elseif (strpos($transport_mode_lower, 'deniz') !== false) {
+                            $transport_process_text = "1-Presentation and mutual signing of the offer,<br>2-Making a 20% down payment of the offer price to the company account and making a definitive registration in our operation program,<br>3-Container reservation from the shipping company,<br>4-Preparation of customs documents,<br>5-Collection of goods from the loading address,<br>6-Customs clearance of the goods and departure,<br>7-Payment of the remaining balance,<br>8-Customs clearance procedures in the destination country,<br>9-Delivery of goods to the delivery address.";
+                        } elseif (strpos($transport_mode_lower, 'hava') !== false) {
+                            $transport_process_text = "1-Presentation and mutual signing of the offer,<br>2-Making a 20% down payment of the offer price to the company account and making a definitive registration in our operation program,<br>3-Cargo reservation from the airline company,<br>4-Preparation of customs documents,<br>5-Collection of goods from the loading address,<br>6-Customs clearance of the goods and departure,<br>7-Payment of the remaining balance,<br>8-Customs clearance procedures in the destination country,<br>9-Delivery of goods to the delivery address.";
                         } else {
-                            // Eğer veritabanında kayıtlı değer yoksa, taşıma moduna göre varsayılan süreç metni belirle
-                            $transport_process_text = '';
-                            $transport_mode_lower = strtolower($quote['transport_name']);
-
-                            // Eğer üstte özel bir içerik atanmadıysa varsayılan metni oluştur
-                            if (empty($transport_process_text)) {
-                            if ($is_english) {
-                                // İngilizce süreç metinleri
-                                if (strpos($transport_mode_lower, 'karayolu') !== false) {
-                                    $transport_process_text = "1-Presentation and mutual signing of the offer,<br>
-2-Making a 20% down payment of the offer price to the company account and making a definitive registration in our operation program,<br>
-3-Preparation of customs documents,<br>
-4-Collection of goods from the loading address,<br>
-5-Customs clearance of the goods and departure,<br>
-6-Payment of the remaining balance,<br>
-7-Customs clearance procedures in the destination country,<br>
-8-Delivery of goods to the delivery address.";
-                                } elseif (strpos($transport_mode_lower, 'deniz') !== false) {
-                                    $transport_process_text = "1-Presentation and mutual signing of the offer,<br>
-2-Making a 20% down payment of the offer price to the company account and making a definitive registration in our operation program,<br>
-3-Container reservation from the shipping company,<br>
-4-Preparation of customs documents,<br>
-5-Collection of goods from the loading address,<br>
-6-Customs clearance of the goods and departure,<br>
-7-Payment of the remaining balance,<br>
-8-Customs clearance procedures in the destination country,<br>
-9-Delivery of goods to the delivery address.";
-                                } elseif (strpos($transport_mode_lower, 'hava') !== false) {
-                                    $transport_process_text = "1-Presentation and mutual signing of the offer,<br>
-2-Making a 20% down payment of the offer price to the company account and making a definitive registration in our operation program,<br>
-3-Cargo reservation from the airline company,<br>
-4-Preparation of customs documents,<br>
-5-Collection of goods from the loading address,<br>
-6-Customs clearance of the goods and departure,<br>
-7-Payment of the remaining balance,<br>
-8-Customs clearance procedures in the destination country,<br>
-9-Delivery of goods to the delivery address.";
-                                } else {
-                                    // Varsayılan karayolu süreci
-                                    $transport_process_text = "1-Presentation and mutual signing of the offer,<br>
-2-Making a 20% down payment of the offer price to the company account and making a definitive registration in our operation program,<br>
-3-Preparation of customs documents,<br>
-4-Collection of goods from the loading address,<br>
-5-Customs clearance of the goods and departure,<br>
-6-Payment of the remaining balance,<br>
-7-Customs clearance procedures in the destination country,<br>
-8-Delivery of goods to the delivery address.";
-                                }
-                            } else {
-                                // Türkçe süreç metinleri
-                                if (strpos($transport_mode_lower, 'karayolu') !== false) {
-                                    $transport_process_text = "1-Teklif sunulması ve karşılıklı imzalanması,<br>
-2-Şirket hesabına teklif fiyatındaki tutarın %20 si oranında ön ödeme yapılması ve operasyon programımıza kesin kayıt yapılması,<br>
-3-Gümrük evraklarının hazırlanması,<br>
-4-Eşyaların yükleme adresinden alınması,<br>
-5-Eşyanın gümrük işlemlerinin yapılarak yola çıkartılması,<br>
-6-Kalan bakiye ödemesinin yapılması,<br>
-7-Varış ülke gümrük açılım işlemlerinin yapılması,<br>
-8-Eşyanın teslimat adresine teslimi şeklindedir.";
-                                } elseif (strpos($transport_mode_lower, 'deniz') !== false) {
-                                    $transport_process_text = "1-Teklif sunulması ve karşılıklı imzalanması,<br>
-2-Şirket hesabına teklif fiyatındaki tutarın %20 si oranında ön ödeme yapılması ve operasyon programımıza kesin kayıt yapılması,<br>
-3-Gemi firmasından konteynır rezervasyonunun yapılması,<br>
-4-Gümrük evraklarının hazırlanması,<br>
-5-Eşyaların yükleme adresinden alınması,<br>
-6-Eşyanın gümrük işlemlerinin yapılarak yola çıkartılması,<br>
-7-Kalan bakiye ödemesinin yapılması,<br>
-8-Varış ülke gümrük açılım işlemlerinin yapılması,<br>
-9-Eşyanın teslimat adresine teslimi şeklindedir.";
-                                } elseif (strpos($transport_mode_lower, 'hava') !== false) {
-                                    $transport_process_text = "1-Teklif sunulması ve karşılıklı imzalanması,<br>
-2-Şirket hesabına teklif fiyatındaki tutarın %20 si oranında ön ödeme yapılması ve operasyon programımıza kesin kayıt yapılması,<br>
-3-Havayolu şirketinden kargo rezervasyonunun yapılması,<br>
-4-Gümrük evraklarının hazırlanması,<br>
-5-Eşyaların yükleme adresinden alınması,<br>
-6-Eşyanın gümrük işlemlerinin yapılarak yola çıkartılması,<br>
-7-Kalan bakiye ödemesinin yapılması,<br>
-8-Varış ülke gümrük açılım işlemlerinin yapılması,<br>
-9-Eşyanın teslimat adresine teslimi şeklindedir.";
-                                } else {
-                                    // Varsayılan karayolu süreci
-                                    $transport_process_text = "1-Teklif sunulması ve karşılıklı imzalanması,<br>
-2-Şirket hesabına teklif fiyatındaki tutarın %20 si oranında ön ödeme yapılması ve operasyon programımıza kesin kayıt yapılması,<br>
-3-Gümrük evraklarının hazırlanması,<br>
-4-Eşyaların yükleme adresinden alınması,<br>
-5-Eşyanın gümrük işlemlerinin yapılarak yola çıkartılması,<br>
-6-Kalan bakiye ödemesinin yapılması,<br>
-7-Varış ülke gümrük açılım işlemlerinin yapılması,<br>
-8-Eşyanın teslimat adresine teslimi şeklindedir.";
-                                }
-                                }
-                            }
+                            $transport_process_text = "1-Presentation and mutual signing of the offer,<br>2-Making a 20% down payment of the offer price to the company account and making a definitive registration in our operation program,<br>3-Preparation of customs documents,<br>4-Collection of goods from the loading address,<br>5-Customs clearance of the goods and departure,<br>6-Payment of the remaining balance,<br>7-Customs clearance procedures in the destination country,<br>8-Delivery of goods to the delivery address.";
                         }
-                        ?>
-
-                                                <div class="transport-process-content">
-                            <p><?php echo $transport_process_text; ?></p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Terms Section -->
-                <div class="form-section" data-section="terms">
-                    <div class="section-header">
-                        <div class="section-label"><?= $t['terms'] ?></div>
-                        <div class="section-title"></div>
-                    </div>
-                    <div class="form-content">
-                        <?php
-                        // Önce quotes tablosundaki terms_content'i kontrol et, yoksa template'den al
-                        $terms_content = $quote['terms_content'] ?? $quote['template_terms_content'] ?? '';
-                        if (!empty($terms_content)): ?>
-                            <!-- Şartlar içeriği -->
-                            <?php
-                            // Şablon değişkenlerini değiştir
-                            $terms_content = str_replace('{customer_name}', htmlspecialchars($quote['first_name'] . ' ' . $quote['last_name']), $terms_content);
-                            $terms_content = str_replace('{quote_number}', htmlspecialchars($quote['quote_number']), $terms_content);
-                            $terms_content = str_replace('{origin}', htmlspecialchars($quote['origin']), $terms_content);
-                            $terms_content = str_replace('{destination}', htmlspecialchars($quote['destination']), $terms_content);
-                            $terms_content = str_replace('{weight}', number_format($quote['weight'], 0, ',', '.'), $terms_content);
-                            $terms_content = str_replace('{volume}', number_format($quote['volume'] ?? 0, 2, ',', '.'), $terms_content);
-                            $terms_content = str_replace('{pieces}', $quote['pieces'] ?? $t['not_specified'], $terms_content);
-                            $terms_content = str_replace('{price}', formatPriceWithCurrency($quote['final_price'], $currency), $terms_content);
-                            $terms_content = str_replace('{valid_until}', formatDate($quote['valid_until']), $terms_content);
-                            $terms_content = str_replace('{cargo_type}', $quote['cargo_type'] ?? 'Genel', $terms_content);
-                            $terms_content = str_replace('{trade_type}', $quote['trade_type'] ?? '', $terms_content);
-                            $terms_content = str_replace('{start_date}', $quote['start_date'] ? formatDate($quote['start_date']) : $t['not_specified'], $terms_content);
-                            $terms_content = str_replace('{delivery_date}', $quote['delivery_date'] ? formatDate($quote['delivery_date']) : $t['not_specified'], $terms_content);
-
-                            echo $terms_content;
-                            ?>
-                        <?php endif; ?>
-                    </div>
-                </div>
+                    } else {
+                        if (strpos($transport_mode_lower, 'karayolu') !== false) {
+                            $transport_process_text = "1-Teklif sunulması ve karşılıklı imzalanması,<br>2-Şirket hesabına teklif fiyatındaki tutarın %20 si oranında ön ödeme yapılması ve operasyon programımıza kesin kayıt yapılması,<br>3-Gümrük evraklarının hazırlanması,<br>4-Eşyaların yükleme adresinden alınması,<br>5-Eşyanın gümrük işlemlerinin yapılarak yola çıkartılması,<br>6-Kalan bakiye ödemesinin yapılması,<br>7-Varış ülke gümrük açılım işlemlerinin yapılması,<br>8-Eşyanın teslimat adresine teslimi şeklindedir.";
+                        } elseif (strpos($transport_mode_lower, 'deniz') !== false) {
+                            $transport_process_text = "1-Teklif sunulması ve karşılıklı imzalanması,<br>2-Şirket hesabına teklif fiyatındaki tutarın %20 si oranında ön ödeme yapılması ve operasyon programımıza kesin kayıt yapılması,<br>3-Gemi firmasından konteynır rezervasyonunun yapılması,<br>4-Gümrük evraklarının hazırlanması,<br>5-Eşyaların yükleme adresinden alınması,<br>6-Eşyanın gümrük işlemlerinin yapılarak yola çıkartılması,<br>7-Kalan bakiye ödemesinin yapılması,<br>8-Varış ülke gümrük açılım işlemlerinin yapılması,<br>9-Eşyanın teslimat adresine teslimi şeklindedir.";
+                        } elseif (strpos($transport_mode_lower, 'hava') !== false) {
+                            $transport_process_text = "1-Teklif sunulması ve karşılıklı imzalanması,<br>2-Şirket hesabına teklif fiyatındaki tutarın %20 si oranında ön ödeme yapılması ve operasyon programımıza kesin kayıt yapılması,<br>3-Havayolu şirketinden kargo rezervasyonunun yapılması,<br>4-Gümrük evraklarının hazırlanması,<br>5-Eşyaların yükleme adresinden alınması,<br>6-Eşyanın gümrük işlemlerinin yapılarak yola çıkartılması,<br>7-Kalan bakiye ödemesinin yapılması,<br>8-Varış ülke gümrük açılım işlemlerinin yapılması,<br>9-Eşyanın teslimat adresine teslimi şeklindedir.";
+                        } else {
+                            $transport_process_text = "1-Teklif sunulması ve karşılıklı imzalanması,<br>2-Şirket hesabına teklif fiyatındaki tutarın %20 si oranında ön ödeme yapılması ve operasyon programımıza kesin kayıt yapılması,<br>3-Gümrük evraklarının hazırlanması,<br>4-Eşyaların yükleme adresinden alınması,<br>5-Eşyanın gümrük işlemlerinin yapılarak yola çıkartılması,<br>6-Kalan bakiye ödemesinin yapılması,<br>7-Varış ülke gümrük açılım işlemlerinin yapılması,<br>8-Eşyanın teslimat adresine teslimi şeklindedir.";
+                        }
+                    }
+                }
+                echo '<div class="transport-process-content"><p>' . $transport_process_text . '</p></div>';
+                echo '  </div>';
+                echo '</div>';
+            } elseif ($secKey === 'terms') {
+                $terms_label = !empty($quote['template_terms_title']) ? $quote['template_terms_title'] : $t['terms'];
+                echo '<div class="form-section" data-section="terms">';
+                echo '  <div class="section-header">';
+                echo '    <div class="section-label">' . htmlspecialchars($terms_label) . '</div>';
+                echo '    <div class="section-title"></div>';
+                echo '  </div>';
+                echo '  <div class="form-content">';
+                $terms_content = $quote['terms_content'] ?? $quote['template_terms_content'] ?? '';
+                if (!empty($terms_content)) {
+                    $terms_content = str_replace('{customer_name}', htmlspecialchars($quote['first_name'] . ' ' . $quote['last_name']), $terms_content);
+                    $terms_content = str_replace('{quote_number}', htmlspecialchars($quote['quote_number']), $terms_content);
+                    $terms_content = str_replace('{origin}', htmlspecialchars($quote['origin']), $terms_content);
+                    $terms_content = str_replace('{destination}', htmlspecialchars($quote['destination']), $terms_content);
+                    $terms_content = str_replace('{weight}', number_format($quote['weight'], 0, ',', '.'), $terms_content);
+                    $terms_content = str_replace('{volume}', number_format($quote['volume'] ?? 0, 2, ',', '.'), $terms_content);
+                    $terms_content = str_replace('{pieces}', $quote['pieces'] ?? $t['not_specified'], $terms_content);
+                    $terms_content = str_replace('{price}', formatPriceWithCurrency($quote['final_price'], $currency), $terms_content);
+                    $terms_content = str_replace('{valid_until}', formatDate($quote['valid_until']), $terms_content);
+                    $terms_content = str_replace('{cargo_type}', $quote['cargo_type'] ?? 'Genel', $terms_content);
+                    $terms_content = str_replace('{trade_type}', $quote['trade_type'] ?? '', $terms_content);
+                    $terms_content = str_replace('{start_date}', $quote['start_date'] ? formatDate($quote['start_date']) : $t['not_specified'], $terms_content);
+                    $terms_content = str_replace('{delivery_date}', $quote['delivery_date'] ? formatDate($quote['delivery_date']) : $t['not_specified'], $terms_content);
+                    echo $terms_content;
+                }
+                echo '  </div>';
+                echo '</div>';
+            } elseif (strpos($secKey, 'dynamic_') === 0) {
+                $idPart = substr($secKey, strlen('dynamic_'));
+                $titleKey = 'dynamic_section_' . $idPart . '_title';
+                $contentKey = 'dynamic_section_' . $idPart . '_content';
+                $title = $custom_fields[$titleKey] ?? ($dynamic_sections[$titleKey] ?? '');
+                $content = $custom_fields[$contentKey] ?? ($dynamic_sections[$contentKey] ?? '');
+                if (!empty($content)) {
+                    echo '<div class="form-section" data-section="' . htmlspecialchars($secKey) . '">';
+                    echo '  <div class="section-header">';
+                    echo '    <div class="section-label">' . (!empty($title) ? htmlspecialchars($title) : '<span style="color:#666">Yeni Bölüm</span>') . '</div>';
+                    echo '    <div class="section-title"></div>';
+                    echo '  </div>';
+                    echo '  <div class="form-content">' . $content . '</div>';
+                    echo '</div>';
+                }
+            }
+        }
+        ?>
 
                                 <!-- Modern Referans Görseller Bölümü -->
                 <?php if (($quote['show_reference_images'] ?? 0) == 1): ?>
