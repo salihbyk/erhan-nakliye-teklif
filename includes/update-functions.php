@@ -7,6 +7,7 @@
  * Mevcut sistem versiyonunu al
  */
 function getCurrentSystemVersion() {
+    // 1) Önce veritabanı ayarı
     try {
         $database = new Database();
         $db = $database->getConnection();
@@ -15,10 +16,24 @@ function getCurrentSystemVersion() {
         $stmt->execute();
         $result = $stmt->fetch();
 
-        return $result ? $result['setting_value'] : '1.0.0';
+        if ($result && !empty($result['setting_value'])) {
+            return $result['setting_value'];
+        }
     } catch (Exception $e) {
-        return '1.0.0';
+        // Devam et
     }
+
+    // 2) Sonra version.txt
+    $versionTxtPath = __DIR__ . '/../version.txt';
+    if (file_exists($versionTxtPath)) {
+        $txt = trim(@file_get_contents($versionTxtPath));
+        if (!empty($txt)) {
+            return $txt;
+        }
+    }
+
+    // 3) Varsayılan
+    return '1.0.0';
 }
 
 /**

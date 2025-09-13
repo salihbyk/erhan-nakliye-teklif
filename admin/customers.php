@@ -590,23 +590,32 @@ $stats = $stats_stmt->fetch();
                                                                                         <ul class="dropdown-menu">
                                                 <?php foreach ($customer_quotes as $quote):
                                                     // Durum renklerini belirle
-                                                    $status_color = match($quote['status']) {
-                                                        'accepted' => '#28a745',
-                                                        'pending' => '#ffc107',
-                                                        'sent' => '#17a2b8',
-                                                        'rejected' => '#dc3545',
-                                                        'expired' => '#6c757d',
-                                                        default => '#6c757d'
-                                                    };
-
-                                                    $status_text = match($quote['status']) {
-                                                        'accepted' => 'Onaylandı',
-                                                        'pending' => 'Bekliyor',
-                                                        'sent' => 'Gönderildi',
-                                                        'rejected' => 'Reddedildi',
-                                                        'expired' => 'Süresi Doldu',
-                                                        default => 'Bilinmiyor'
-                                                    };
+                                                    // PHP 7 uyumluluğu için match yerine switch kullan
+                                                    switch ($quote['status']) {
+                                                        case 'accepted':
+                                                            $status_color = '#28a745';
+                                                            $status_text = 'Onaylandı';
+                                                            break;
+                                                        case 'pending':
+                                                            $status_color = '#ffc107';
+                                                            $status_text = 'Bekliyor';
+                                                            break;
+                                                        case 'sent':
+                                                            $status_color = '#17a2b8';
+                                                            $status_text = 'Gönderildi';
+                                                            break;
+                                                        case 'rejected':
+                                                            $status_color = '#dc3545';
+                                                            $status_text = 'Reddedildi';
+                                                            break;
+                                                        case 'expired':
+                                                            $status_color = '#6c757d';
+                                                            $status_text = 'Süresi Doldu';
+                                                            break;
+                                                        default:
+                                                            $status_color = '#6c757d';
+                                                            $status_text = 'Bilinmiyor';
+                                                    }
                                                 ?>
                                                 <li>
                                                     <a class="dropdown-item" href="../api/generate-pdf.php?id=<?= urlencode($quote['quote_number']) ?>" target="_blank">

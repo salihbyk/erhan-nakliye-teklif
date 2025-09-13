@@ -54,6 +54,11 @@ if (isset($_POST['action']) && $_POST['action'] === 'install_git_update') {
             if ($result['success']) {
                 $message = $result['message'] . " (v{$result['version']})";
 
+                // Versiyonu sistem ayarına yaz
+                if (!empty($result['version'])) {
+                    updateSystemVersion($result['version']);
+                }
+
                 // Sayfayı yenile
                 echo "<script>setTimeout(function() { window.location.reload(); }, 3000);</script>";
             } else {
