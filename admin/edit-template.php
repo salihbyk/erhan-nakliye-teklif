@@ -65,6 +65,20 @@ if ($templateId > 0) {
             $template['terms_content'] = html_entity_decode($template['terms_content'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
 
+        // Dinamik bölümleri decode et
+        if (isset($template['dynamic_sections']) && !empty($template['dynamic_sections'])) {
+            $template['dynamic_sections'] = json_decode($template['dynamic_sections'], true) ?: [];
+        } else {
+            $template['dynamic_sections'] = [];
+        }
+
+        // Bölüm sıralamasını decode et
+        if (isset($template['section_order']) && !empty($template['section_order'])) {
+            $template['section_order'] = json_decode($template['section_order'], true) ?: ['services', 'transport', 'terms'];
+        } else {
+            $template['section_order'] = ['services', 'transport', 'terms'];
+        }
+
         // Debug: Template içeriğini kontrol et
         error_log("Template loaded: " . print_r($template, true));
 
@@ -75,6 +89,10 @@ if ($templateId > 0) {
 
 // Form gönderilmişse
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Güvence: POST ile gelen template_id varsa kullan
+    if (!empty($_POST['template_id'])) {
+        $templateId = (int)$_POST['template_id'];
+    }
     $templateName = $_POST['template_name'] ?? '';
     $transportModeId = $_POST['transport_mode_id'] ?? '';
     $language = $_POST['language'] ?? 'tr';
@@ -84,6 +102,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $transportProcessContent = $_POST['transport_process_content'] ?? '';
     $termsContent = $_POST['terms_content'] ?? '';
     $isActive = isset($_POST['is_active']) ? 1 : 0;
+
+    // Bölüm başlıkları
+    $servicesTitle = $_POST['services_title'] ?? 'Hizmetlerimiz';
+    $transportProcessTitle = $_POST['transport_process_title'] ?? 'Taşıma Süreci';
+    $termsTitle = $_POST['terms_title'] ?? 'Şartlar ve Koşullar';
+
+    // Dinamik bölümler için JSON verisi
+    $dynamicSections = [];
+    foreach ($_POST as $key => $value) {
+        if (strpos($key, 'dynamic_section_') === 0) {
+            $dynamicSections[$key] = $value;
+        }
+    }
+
+    // Debug: POST verilerini kontrol et
+    error_log("=== FORM SUBMISSION DEBUG ===");
+    error_log("Template ID: " . $templateId);
+    error_log("POST method: " . $_SERVER['REQUEST_METHOD']);
+    error_log("POST data: " . print_r($_POST, true));
+    error_log("Dynamic sections: " . print_r($dynamicSections, true));
+    error_log("Section order: " . print_r($sectionOrder, true));
+
+    // Bölüm sıralaması (array olarak çalış, DB'ye JSON kaydet)
+    $sectionOrderRaw = $_POST['section_order'] ?? '["services","transport","terms"]';
+    $sectionOrderArr = is_array($sectionOrderRaw)
+        ? $sectionOrderRaw
+        : (json_decode((string)$sectionOrderRaw, true) ?: ['services','transport','terms']);
+
+    // Dinamik bölüm anahtarları section_order'a dahil değilse ekle
+    if (!empty($dynamicSections)) {
+        $dynamicIds = [];
+        foreach (array_keys($dynamicSections) as $k) {
+            if (preg_match('/^dynamic_section_(\d+)_/', $k, $m)) {
+                $dynamicIds[$m[1]] = true;
+            }
+        }
+        foreach (array_keys($dynamicIds) as $idPart) {
+            $key = 'dynamic_' . $idPart;
+            if (!in_array($key, $sectionOrderArr, true)) {
+                $sectionOrderArr[] = $key;
+            }
+        }
+    }
+
+    $sectionOrderJson = json_encode(array_values(array_unique($sectionOrderArr)));
 
     try {
         if ($templateId > 0) {
@@ -97,11 +160,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 services_content = ?,
                 transport_process_content = ?,
                 terms_content = ?,
+                services_title = ?,
+                transport_process_title = ?,
+                terms_title = ?,
+                dynamic_sections = ?,
+                section_order = ?,
                 is_active = ?,
                 updated_at = NOW()
                 WHERE id = ?");
 
-            $stmt->execute([
+            $result = $stmt->execute([
                 $templateName,
                 $transportModeId,
                 $language,
@@ -110,16 +178,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $servicesContent,
                 $transportProcessContent,
                 $termsContent,
+                $servicesTitle,
+                $transportProcessTitle,
+                $termsTitle,
+                json_encode($dynamicSections),
+                $sectionOrderJson,
                 $isActive,
                 $templateId
             ]);
+
+            error_log("UPDATE result: " . ($result ? 'SUCCESS' : 'FAILED'));
+            error_log("Affected rows: " . $stmt->rowCount());
 
             $_SESSION['success_message'] = 'Şablon başarıyla güncellendi.';
         } else {
             // Yeni ekleme (quote_templates)
             $stmt = $db->prepare("INSERT INTO quote_templates
-                (template_name, transport_mode_id, language, currency, trade_type, services_content, transport_process_content, terms_content, is_active, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                (template_name, transport_mode_id, language, currency, trade_type, services_content, transport_process_content, terms_content, services_title, transport_process_title, terms_title, dynamic_sections, section_order, is_active, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
 
             $stmt->execute([
                 $templateName,
@@ -130,6 +206,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $servicesContent,
                 $transportProcessContent,
                 $termsContent,
+                $servicesTitle,
+                $transportProcessTitle,
+                $termsTitle,
+                json_encode($dynamicSections),
+                $sectionOrderJson,
                 $isActive
             ]);
 
@@ -141,7 +222,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } catch (Exception $e) {
         $error = 'Bir hata oluştu: ' . $e->getMessage();
+        error_log("EXCEPTION: " . $e->getMessage());
+        error_log("TRACE: " . $e->getTraceAsString());
     }
+} else {
+    error_log("=== NO POST REQUEST ===");
+    error_log("Request method: " . $_SERVER['REQUEST_METHOD']);
+    error_log("Template ID: " . $templateId);
 }
 ?>
 <!DOCTYPE html>
@@ -426,7 +513,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <?php endif; ?>
 
-        <form method="POST" action="">
+        <form method="POST" action="" onsubmit="console.log('Form submitted!'); return prepareFormSubmission();">
+            <!-- Template id (POST ile güvence) -->
+            <input type="hidden" name="template_id" value="<?= (int)$templateId ?>">
+            <!-- Bölüm sıralaması için gizli input -->
+            <input type="hidden" name="section_order" id="section_order" value="<?= htmlspecialchars(json_encode($template['section_order'] ?? ['services', 'transport', 'terms'])) ?>">
+
             <div class="glass-card">
                 <div class="form-section">
                     <h2 class="section-title">Temel Bilgiler</h2>
@@ -497,8 +589,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="form-section">
                     <h2 class="section-title">Şablon İçerikleri</h2>
 
-                    <div class="editor-section">
-                        <label class="form-label label-services">Hizmetlerimiz</label>
+                    <!-- Sıralı bölümler için container -->
+                    <div id="sections-container">
+                        <!-- Bölümler JavaScript ile sıralı şekilde yüklenecek -->
+                    </div>
+
+                    <!-- Template bölümleri (JavaScript ile kopyalanacak) -->
+                    <div style="display: none;">
+                        <div class="editor-section" data-section="services" id="template-services">
+                        <div class="section-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                            <span class="editable-section-title form-label label-services"
+                                  data-field="services_title"
+                                  onclick="editSectionTitle(this)"
+                                  style="cursor: pointer; padding: 4px 10px; border-radius: 8px; background: #e0f2fe; color: #0c4a6e; font-weight: 700; margin: 0;"
+                                  title="Başlığı düzenlemek için tıklayın">
+                                <?= ($template && isset($template['services_title'])) ? htmlspecialchars($template['services_title']) : 'Hizmetlerimiz' ?>
+                                <i class="fas fa-edit ms-2" style="font-size: 0.8em; opacity: 0.6;"></i>
+                            </span>
+                            <div class="section-controls">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveSection(this, 'up')" title="Yukarı taşı">
+                                    <i class="fas fa-arrow-up"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveSection(this, 'down')" title="Aşağı taşı">
+                                    <i class="fas fa-arrow-down"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSection(this)" title="Bölümü kaldır">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <input type="hidden" name="services_title" value="<?= ($template && isset($template['services_title'])) ? htmlspecialchars($template['services_title']) : 'Hizmetlerimiz' ?>">
                         <div class="rich-editor-container-inline" data-field="services_content">
                             <div class="btn-toolbar mb-2" role="toolbar">
                                 <div class="btn-group me-2" role="group">
@@ -593,10 +713,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <textarea class="rich-editor-textarea" id="services_content_source" style="display:none; font-family: 'Courier New', monospace; font-size: 12px;" oninput="updateHiddenFieldInline('services_content')"></textarea>
                             <textarea name="services_content" id="services_content_input" style="display:none;"><?= ($template && isset($template['services_content'])) ? htmlspecialchars($template['services_content']) : '' ?></textarea>
                         </div>
-                    </div>
+                        </div>
 
-                    <div class="editor-section">
-                        <label class="form-label label-transport">Taşıma Süreci</label>
+                        <div class="editor-section" data-section="transport" id="template-transport">
+                        <div class="section-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                            <span class="editable-section-title form-label label-transport"
+                                  data-field="transport_process_title"
+                                  onclick="editSectionTitle(this)"
+                                  style="cursor: pointer; padding: 4px 10px; border-radius: 8px; background: #dcfce7; color: #14532d; font-weight: 700; margin: 0;"
+                                  title="Başlığı düzenlemek için tıklayın">
+                                <?= ($template && isset($template['transport_process_title'])) ? htmlspecialchars($template['transport_process_title']) : 'Taşıma Süreci' ?>
+                                <i class="fas fa-edit ms-2" style="font-size: 0.8em; opacity: 0.6;"></i>
+                            </span>
+                            <div class="section-controls">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveSection(this, 'up')" title="Yukarı taşı">
+                                    <i class="fas fa-arrow-up"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveSection(this, 'down')" title="Aşağı taşı">
+                                    <i class="fas fa-arrow-down"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSection(this)" title="Bölümü kaldır">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <input type="hidden" name="transport_process_title" value="<?= ($template && isset($template['transport_process_title'])) ? htmlspecialchars($template['transport_process_title']) : 'Taşıma Süreci' ?>">
                         <div class="rich-editor-container-inline" data-field="transport_process_content">
                             <div class="btn-toolbar mb-2" role="toolbar">
                                 <div class="btn-group me-2" role="group">
@@ -691,10 +832,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <textarea class="rich-editor-textarea" id="transport_process_content_source" style="display:none; font-family: 'Courier New', monospace; font-size: 12px;" oninput="updateHiddenFieldInline('transport_process_content')"></textarea>
                             <textarea name="transport_process_content" id="transport_process_content_input" style="display:none;"><?= ($template && isset($template['transport_process_content'])) ? htmlspecialchars($template['transport_process_content']) : '' ?></textarea>
                         </div>
-                    </div>
+                        </div>
 
-                    <div class="editor-section">
-                        <label class="form-label label-terms">Şartlar ve Koşullar</label>
+                        <div class="editor-section" data-section="terms" id="template-terms">
+                        <div class="section-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                            <span class="editable-section-title form-label label-terms"
+                                  data-field="terms_title"
+                                  onclick="editSectionTitle(this)"
+                                  style="cursor: pointer; padding: 4px 10px; border-radius: 8px; background: #ffedd5; color: #7c2d12; font-weight: 700; margin: 0;"
+                                  title="Başlığı düzenlemek için tıklayın">
+                                <?= ($template && isset($template['terms_title'])) ? htmlspecialchars($template['terms_title']) : 'Şartlar ve Koşullar' ?>
+                                <i class="fas fa-edit ms-2" style="font-size: 0.8em; opacity: 0.6;"></i>
+                            </span>
+                            <div class="section-controls">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveSection(this, 'up')" title="Yukarı taşı">
+                                    <i class="fas fa-arrow-up"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveSection(this, 'down')" title="Aşağı taşı">
+                                    <i class="fas fa-arrow-down"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSection(this)" title="Bölümü kaldır">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <input type="hidden" name="terms_title" value="<?= ($template && isset($template['terms_title'])) ? htmlspecialchars($template['terms_title']) : 'Şartlar ve Koşullar' ?>">
                         <div class="rich-editor-container-inline" data-field="terms_content">
                             <div class="btn-toolbar mb-2" role="toolbar">
                                 <div class="btn-group me-2" role="group">
@@ -789,6 +951,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <textarea class="rich-editor-textarea" id="terms_content_source" style="display:none; font-family: 'Courier New', monospace; font-size: 12px;" oninput="updateHiddenFieldInline('terms_content')"></textarea>
                             <textarea name="terms_content" id="terms_content_input" style="display:none;"><?= ($template && isset($template['terms_content'])) ? htmlspecialchars($template['terms_content']) : '' ?></textarea>
                         </div>
+                        </div>
+                    </div>
+
+                    <!-- Yeni Bölüm Ekleme Butonu -->
+                    <div class="text-center mt-3">
+                        <button type="button" class="btn btn-success" onclick="addNewSection()">
+                            <i class="fas fa-plus me-2"></i>Yeni Bölüm Ekle
+                        </button>
                     </div>
                 </div>
 
@@ -1474,13 +1644,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const editor = getInlineEditor(field);
             const source = getInlineSource(field);
             const hidden = getInlineHidden(field);
-            if (!hidden) return;
+
+            console.log('updateHiddenFieldInline called for:', field);
+            console.log('Editor found:', !!editor);
+            console.log('Source found:', !!source);
+            console.log('Hidden found:', !!hidden);
+
+            if (!hidden) {
+                console.warn('Hidden input not found for field:', field);
+                return;
+            }
 
             // Kaynak görünümündeyse source'tan, değilse editor'den al
             if (source && source.style.display === 'block') {
                 hidden.value = source.value;
+                console.log('Updated from source:', source.value.substring(0, 50) + '...');
             } else if (editor) {
                 hidden.value = editor.innerHTML;
+                console.log('Updated from editor:', editor.innerHTML.substring(0, 50) + '...');
             }
         }
 
@@ -1626,6 +1807,494 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 alert('Dosya yükleme hatası: ' + error);
             });
+        }
+
+        // Bölüm başlığı düzenleme fonksiyonu
+        function editSectionTitle(element) {
+            if (element.classList.contains('editing')) return;
+
+            // Düzenleme sırasında tıklamayı engelle
+            element.style.pointerEvents = 'none';
+
+            const field = element.getAttribute('data-field');
+            const currentText = element.textContent.replace('✎', '').replace('🖉', '').trim();
+
+            element.classList.add('editing');
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentText;
+            input.className = 'form-control form-control-sm';
+            input.style.display = 'inline-block';
+            input.style.width = 'auto';
+            input.style.minWidth = '200px';
+
+            // Mevcut içeriği temizle ve input'u ekle
+            element.innerHTML = '';
+            element.appendChild(input);
+            input.focus();
+            input.select();
+
+            let isSaving = false; // Çift kaydetmeyi önle
+
+            function saveTitle() {
+                if (isSaving) return;
+                isSaving = true;
+
+                const newValue = input.value.trim();
+                if (newValue === '') {
+                    alert('Başlık boş olamaz!');
+                    input.focus();
+                    isSaving = false;
+                    return;
+                }
+
+                // Event listener'ları kaldır
+                input.removeEventListener('blur', saveTitle);
+                input.removeEventListener('keypress', handleKeypress);
+
+                // İçeriği güncelle
+                element.innerHTML = newValue + '<i class="fas fa-edit ms-2" style="font-size: 0.8em; opacity: 0.6;"></i>';
+                element.classList.remove('editing');
+                element.style.pointerEvents = 'auto'; // Tıklamayı tekrar etkinleştir
+
+                // Hidden input'u güncelle
+                const hiddenInput = document.querySelector(`input[name="${field}"]`);
+                if (hiddenInput) {
+                    hiddenInput.value = newValue;
+                }
+
+                isSaving = false;
+            }
+
+            function cancelEdit() {
+                if (isSaving) return;
+
+                // Event listener'ları kaldır
+                input.removeEventListener('blur', saveTitle);
+                input.removeEventListener('keypress', handleKeypress);
+
+                // Orijinal içeriği geri yükle
+                element.innerHTML = currentText + '<i class="fas fa-edit ms-2" style="font-size: 0.8em; opacity: 0.6;"></i>';
+                element.classList.remove('editing');
+                element.style.pointerEvents = 'auto'; // Tıklamayı tekrar etkinleştir
+            }
+
+            function handleKeypress(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveTitle();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cancelEdit();
+                }
+            }
+
+            // Event listener'ları ekle
+            input.addEventListener('blur', saveTitle);
+            input.addEventListener('keypress', handleKeypress);
+        }
+
+        // Bölüm sıralama fonksiyonları
+        function moveSection(button, direction) {
+            const section = button.closest('.editor-section');
+            const container = section.parentElement;
+
+            if (direction === 'up') {
+                const prevSection = section.previousElementSibling;
+                if (prevSection && prevSection.classList.contains('editor-section')) {
+                    container.insertBefore(section, prevSection);
+                    updateSectionOrder();
+                }
+            } else if (direction === 'down') {
+                const nextSection = section.nextElementSibling;
+                if (nextSection && nextSection.classList.contains('editor-section')) {
+                    container.insertBefore(nextSection, section);
+                    updateSectionOrder();
+                }
+            }
+        }
+
+        // Bölüm sıralamasını güncelle
+        function updateSectionOrder() {
+            const container = document.getElementById('sections-container');
+            const sections = container.querySelectorAll('.editor-section');
+            const order = [];
+
+            sections.forEach(section => {
+                const sectionType = section.getAttribute('data-section');
+                order.push(sectionType);
+            });
+
+            document.getElementById('section_order').value = JSON.stringify(order);
+        }
+
+        // Bölüm kaldırma fonksiyonu
+        function removeSection(button) {
+            const section = button.closest('.editor-section');
+            const sectionName = section.querySelector('.editable-section-title').textContent.replace('✎', '').trim();
+
+            if (confirm(`"${sectionName}" bölümünü kaldırmak istediğinizden emin misiniz?`)) {
+                section.remove();
+                updateSectionOrder();
+            }
+        }
+
+        // Yeni bölüm ekleme fonksiyonu
+        let dynamicSectionCounter = 1;
+
+        function addNewSection() {
+            const container = document.getElementById('sections-container');
+
+            const idPart = Date.now();
+            const sectionKey = `dynamic_${idPart}`;
+            const sectionHtml = `
+                <div class="editor-section" data-section="${sectionKey}">
+                    <div class="section-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                        <span class="editable-section-title form-label"
+                              data-field="dynamic_section_${idPart}_title"
+                              onclick="editSectionTitle(this)"
+                              style="cursor: pointer; padding: 4px 10px; border-radius: 8px; background: #f3f4f6; color: #374151; font-weight: 700; margin: 0;"
+                              title="Başlığı düzenlemek için tıklayın">
+                            Yeni Bölüm
+                            <i class="fas fa-edit ms-2" style="font-size: 0.8em; opacity: 0.6;"></i>
+                        </span>
+                        <div class="section-controls">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveSection(this, 'up')" title="Yukarı taşı">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveSection(this, 'down')" title="Aşağı taşı">
+                                <i class="fas fa-arrow-down"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSection(this)" title="Bölümü kaldır">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <input type="hidden" name="dynamic_section_${idPart}_title" value="Yeni Bölüm">
+                    <div class="rich-editor-container-inline" data-field="dynamic_section_${idPart}_content">
+                        <div class="btn-toolbar mb-2" role="toolbar">
+                            <div class="btn-group me-2" role="group">
+                                <select class="form-select form-select-sm" style="width: 80px;" onchange="changeFontSizeInline(this.value, 'dynamic_section_${idPart}_content')" title="Yazı Boyutu">
+                                    <option value="">Boyut</option>
+                                    <option value="1">8pt</option>
+                                    <option value="2">10pt</option>
+                                    <option value="3">12pt</option>
+                                    <option value="4">14pt</option>
+                                    <option value="5">18pt</option>
+                                    <option value="6">24pt</option>
+                                    <option value="7">36pt</option>
+                                </select>
+                                <select class="form-select form-select-sm" style="width: 120px;" onchange="changeFontFamilyInline(this.value, 'dynamic_section_${idPart}_content')" title="Yazı Tipi">
+                                    <option value="">Yazı Tipi</option>
+                                    <option value="Arial">Arial</option>
+                                    <option value="Times New Roman">Times New Roman</option>
+                                    <option value="Calibri">Calibri</option>
+                                    <option value="Georgia">Georgia</option>
+                                    <option value="Verdana">Verdana</option>
+                                    <option value="Tahoma">Tahoma</option>
+                                    <option value="Courier New">Courier New</option>
+                                </select>
+                            </div>
+
+                            <div class="btn-group me-2" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${idPart}_content','bold')" title="Kalın"><i class="fas fa-bold"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${idPart}_content','italic')" title="İtalik"><i class="fas fa-italic"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${idPart}_content','underline')" title="Altı Çizili"><i class="fas fa-underline"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${idPart}_content','strikeThrough')" title="Üstü Çizili"><i class="fas fa-strikethrough"></i></button>
+                            </div>
+
+                            <div class="btn-group me-2" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${idPart}_content','insertUnorderedList')" title="Madde İşareti"><i class="fas fa-list-ul"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${idPart}_content','insertOrderedList')" title="Numaralı Liste"><i class="fas fa-list-ol"></i></button>
+                            </div>
+
+                            <div class="btn-group me-2" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${idPart}_content','justifyLeft')" title="Sola Hizala"><i class="fas fa-align-left"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${idPart}_content','justifyCenter')" title="Ortala"><i class="fas fa-align-center"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${idPart}_content','justifyRight')" title="Sağa Hizala"><i class="fas fa-align-right"></i></button>
+                            </div>
+
+                            <div class="btn-group me-2" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${idPart}_content','indent')" title="Girinti Artır"><i class="fas fa-indent"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${idPart}_content','outdent')" title="Girinti Azalt"><i class="fas fa-outdent"></i></button>
+                            </div>
+
+                            <div class="btn-group me-2" role="group">
+                                <input type="color" class="btn btn-sm" style="width: 40px; height: 31px; padding: 2px;" onchange="changeTextColorInline(this.value,'dynamic_section_${idPart}_content')" title="Metin Rengi">
+                                <input type="color" class="btn btn-sm" style="width: 40px; height: 31px; padding: 2px;" onchange="changeBackgroundColorInline(this.value,'dynamic_section_${idPart}_content')" title="Arka Plan Rengi" value="#ffffff">
+                                <button type="button" class="btn btn-sm btn-outline-warning" onclick="formatTextInline('dynamic_section_${idPart}_content','hiliteColor','#ffff00')" title="Sarı Vurgu"><i class="fas fa-highlighter"></i></button>
+                            </div>
+
+                            <div class="btn-group me-2" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${idPart}_content','subscript')" title="Alt Simge"><i class="fas fa-subscript"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${idPart}_content','superscript')" title="Üst Simge"><i class="fas fa-superscript"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertHorizontalRuleInline('dynamic_section_${idPart}_content')" title="Yatay Çizgi"><i class="fas fa-minus"></i></button>
+                            </div>
+
+                            <div class="btn-group me-2" role="group">
+                                <button type="button" class="btn btn-sm btn-primary" onclick="insertLinkInline('dynamic_section_${idPart}_content')" title="Bağlantı Ekle"><i class="fas fa-link"></i><span class="d-none d-md-inline ms-1">Link</span></button>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="formatTextInline('dynamic_section_${idPart}_content','unlink')" title="Bağlantıyı Kaldır"><i class="fas fa-unlink"></i></button>
+                            </div>
+
+                            <div class="btn-group me-2" role="group">
+                                <input type="file" id="dynamicFileInput_${idPart}" style="display:none;" onchange="uploadEditorFileInline(this,'dynamic_section_${idPart}_content')" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif">
+                                <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('dynamicFileInput_${idPart}').click()" title="Dosya yükleyip içeriğe link olarak ekle"><i class="fas fa-upload"></i><span class="d-none d-md-inline ms-1">Dosya Yükle</span></button>
+                            </div>
+
+                            <div class="btn-group me-2" role="group">
+                                <button type="button" class="btn btn-sm btn-warning" onclick="removeFormattingInline('dynamic_section_${idPart}_content')" title="Tüm biçimlendirmeyi kaldır"><i class="fas fa-eraser"></i><span class="d-none d-md-inline ms-1">Biçim Temizle</span></button>
+                            </div>
+
+                            <div class="btn-group me-2" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleSourceViewInline('dynamic_section_${idPart}_content', this)" title="HTML kaynak kodunu görüntüle/düzenle"><i class="fas fa-code"></i><span class="d-none d-md-inline ms-1">Kaynak Kodu</span></button>
+                            </div>
+
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${idPart}_content','undo')" title="Geri Al"><i class="fas fa-undo"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${idPart}_content','redo')" title="İleri Al"><i class="fas fa-redo"></i></button>
+                            </div>
+
+                            <div class="btn-group ms-2" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="showTableModal('dynamic_section_${idPart}_content')" title="Tablo Ekle"><i class="fas fa-table"></i></button>
+                            </div>
+                        </div>
+
+                        <div contenteditable="true" class="rich-editor-textarea-inline" id="dynamic_section_${idPart}_content_editor" oninput="updateHiddenFieldInline('dynamic_section_${idPart}_content')">
+                            <p>Bu bölüm için içerik ekleyin...</p>
+                        </div>
+                        <textarea class="rich-editor-textarea" id="dynamic_section_${idPart}_content_source" style="display:none; font-family: 'Courier New', monospace; font-size: 12px;" oninput="updateHiddenFieldInline('dynamic_section_${idPart}_content')"></textarea>
+                        <textarea name="dynamic_section_${idPart}_content" id="dynamic_section_${idPart}_content_input" style="display:none;"></textarea>
+                    </div>
+                </div>
+            `;
+
+            // Yeni bölümü container'a ekle
+            container.insertAdjacentHTML('beforeend', sectionHtml);
+
+            // Yeni eklenen bölümün editörünü başlat
+            setTimeout(() => {
+                const editor = document.getElementById(`dynamic_section_${idPart}_content_editor`);
+                const hiddenInput = document.getElementById(`dynamic_section_${idPart}_content_input`);
+
+                if (editor && hiddenInput) {
+                    // İlk içeriği ayarla
+                    editor.innerHTML = '<p>Bu bölüm için içerik ekleyin...</p>';
+                    hiddenInput.value = '<p>Bu bölüm için içerik ekleyin...</p>';
+
+                    // Editör event'lerini bağla
+                    updateHiddenFieldInline(`dynamic_section_${idPart}_content`);
+
+                    // Debug: Dinamik bölüm oluşturuldu
+                    if (window.location.search.includes('debug')) {
+                        console.log('Dynamic section created:', sectionKey);
+                        console.log('Editor:', editor);
+                        console.log('Hidden input:', hiddenInput);
+                    }
+                }
+            }, 100);
+
+            // Sıralamayı güncelle
+            updateSectionOrder();
+
+            dynamicSectionCounter++;
+        }
+
+        // Form gönderiminden önce tüm editörleri güncelle
+        function prepareFormSubmission() {
+            console.log('=== PREPARE FORM SUBMISSION ===');
+
+            try {
+                // Tüm inline editörleri güncelle
+                const allEditors = document.querySelectorAll('[id$="_content_editor"]');
+                console.log('Found editors:', allEditors.length);
+
+                allEditors.forEach(editor => {
+                    const fieldName = editor.id.replace('_editor', '');
+                    updateHiddenFieldInline(fieldName);
+                    console.log('Updated field:', fieldName);
+                });
+
+                // Sıralamayı güncelle
+                updateSectionOrder();
+                console.log('Section order updated');
+
+                // Form verilerini kontrol et
+                const formData = new FormData(document.querySelector('form'));
+                console.log('=== FORM DATA ===');
+                for (let [key, value] of formData.entries()) {
+                    if (key.includes('template_name') || key.includes('dynamic_section_') || key.includes('services_') || key.includes('section_order')) {
+                        console.log(key + ':', value);
+                    }
+                }
+
+                console.log('Form submission allowed');
+                return true; // Form gönderimini devam ettir
+
+            } catch (error) {
+                console.error('Error in prepareFormSubmission:', error);
+                return false; // Hata durumunda form gönderimini engelle
+            }
+        }
+
+        // Sayfa yüklendiğinde bölümleri sıralı şekilde yükle
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSectionsInOrder();
+        });
+
+        function loadSectionsInOrder() {
+            const container = document.getElementById('sections-container');
+            const sectionOrder = <?php echo json_encode($template['section_order'] ?? ['services', 'transport', 'terms']); ?>;
+            const dynamicSections = <?php echo json_encode($template['dynamic_sections'] ?? []); ?>;
+
+            // Sıralama bilgisini güncelle
+            document.getElementById('section_order').value = JSON.stringify(sectionOrder);
+
+            // Mevcut statik bölümleri taşıyacağımız id eşlemesi
+            const staticMap = {
+                services: 'template-services',
+                transport: 'template-transport',
+                terms: 'template-terms'
+            };
+
+            sectionOrder.forEach(sectionType => {
+                let sectionHtml = '';
+
+                if (staticMap[sectionType]) {
+                    // Statik bölümü kopyalamak yerine GERÇEK düğümü taşı
+                    const el = document.getElementById(staticMap[sectionType]);
+                    if (el) {
+                        container.appendChild(el);
+                    }
+                } else if (sectionType.startsWith('dynamic_')) {
+                    // Dinamik bölüm
+                    const sectionId = sectionType.replace('dynamic_', '');
+                    const titleKey = `dynamic_section_${sectionId}_title`;
+                    const contentKey = `dynamic_section_${sectionId}_content`;
+
+                    if (dynamicSections[titleKey] && dynamicSections[contentKey]) {
+                        sectionHtml = createDynamicSectionHTML(sectionId, dynamicSections[titleKey], dynamicSections[contentKey]);
+                    }
+
+                    if (sectionHtml) {
+                        container.insertAdjacentHTML('beforeend', sectionHtml);
+                        const editor = document.getElementById(`dynamic_section_${sectionId}_content_editor`);
+                        if (editor) {
+                            updateHiddenFieldInline(`dynamic_section_${sectionId}_content`);
+                        }
+                    }
+                }
+            });
+        }
+
+        function createDynamicSectionHTML(sectionId, title, content) {
+            return `
+                <div class="editor-section" data-section="dynamic_${sectionId}">
+                    <div class="section-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                        <span class="editable-section-title form-label"
+                              data-field="dynamic_section_${sectionId}_title"
+                              onclick="editSectionTitle(this)"
+                              style="cursor: pointer; padding: 4px 10px; border-radius: 8px; background: #f3f4f6; color: #374151; font-weight: 700; margin: 0;"
+                              title="Başlığı düzenlemek için tıklayın">
+                            ${title}
+                            <i class="fas fa-edit ms-2" style="font-size: 0.8em; opacity: 0.6;"></i>
+                        </span>
+                        <div class="section-controls">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveSection(this, 'up')" title="Yukarı taşı">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveSection(this, 'down')" title="Aşağı taşı">
+                                <i class="fas fa-arrow-down"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSection(this)" title="Bölümü kaldır">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <input type="hidden" name="dynamic_section_${sectionId}_title" value="${title}">
+                    <div class="rich-editor-container-inline" data-field="dynamic_section_${sectionId}_content">
+                        <div class="btn-toolbar mb-2" role="toolbar">
+                            <div class="btn-group me-2" role="group">
+                                <select class="form-select form-select-sm" style="width: 80px;" onchange="changeFontSizeInline(this.value, 'dynamic_section_${sectionId}_content')" title="Yazı Boyutu">
+                                    <option value="">Boyut</option>
+                                    <option value="1">8pt</option>
+                                    <option value="2">10pt</option>
+                                    <option value="3">12pt</option>
+                                    <option value="4">14pt</option>
+                                    <option value="5">18pt</option>
+                                    <option value="6">24pt</option>
+                                    <option value="7">36pt</option>
+                                </select>
+                                <select class="form-select form-select-sm" style="width: 120px;" onchange="changeFontFamilyInline(this.value, 'dynamic_section_${sectionId}_content')" title="Yazı Tipi">
+                                    <option value="">Yazı Tipi</option>
+                                    <option value="Arial">Arial</option>
+                                    <option value="Times New Roman">Times New Roman</option>
+                                    <option value="Calibri">Calibri</option>
+                                    <option value="Georgia">Georgia</option>
+                                    <option value="Verdana">Verdana</option>
+                                    <option value="Tahoma">Tahoma</option>
+                                    <option value="Courier New">Courier New</option>
+                                </select>
+                            </div>
+                            <div class="btn-group me-2" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${sectionId}_content','bold')" title="Kalın"><i class="fas fa-bold"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${sectionId}_content','italic')" title="İtalik"><i class="fas fa-italic"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${sectionId}_content','underline')" title="Altı Çizili"><i class="fas fa-underline"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${sectionId}_content','strikeThrough')" title="Üstü Çizili"><i class="fas fa-strikethrough"></i></button>
+                            </div>
+                            <div class="btn-group me-2" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${sectionId}_content','insertUnorderedList')" title="Madde İşareti"><i class="fas fa-list-ul"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${sectionId}_content','insertOrderedList')" title="Numaralı Liste"><i class="fas fa-list-ol"></i></button>
+                            </div>
+                            <div class="btn-group me-2" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${sectionId}_content','justifyLeft')" title="Sola Hizala"><i class="fas fa-align-left"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${sectionId}_content','justifyCenter')" title="Ortala"><i class="fas fa-align-center"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${sectionId}_content','justifyRight')" title="Sağa Hizala"><i class="fas fa-align-right"></i></button>
+                            </div>
+                            <div class="btn-group me-2" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${sectionId}_content','indent')" title="Girinti Artır"><i class="fas fa-indent"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${sectionId}_content','outdent')" title="Girinti Azalt"><i class="fas fa-outdent"></i></button>
+                            </div>
+                            <div class="btn-group me-2" role="group">
+                                <input type="color" class="btn btn-sm" style="width: 40px; height: 31px; padding: 2px;" onchange="changeTextColorInline(this.value,'dynamic_section_${sectionId}_content')" title="Metin Rengi">
+                                <input type="color" class="btn btn-sm" style="width: 40px; height: 31px; padding: 2px;" onchange="changeBackgroundColorInline(this.value,'dynamic_section_${sectionId}_content')" title="Arka Plan Rengi" value="#ffffff">
+                                <button type="button" class="btn btn-sm btn-outline-warning" onclick="formatTextInline('dynamic_section_${sectionId}_content','hiliteColor','#ffff00')" title="Sarı Vurgu"><i class="fas fa-highlighter"></i></button>
+                            </div>
+                            <div class="btn-group me-2" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${sectionId}_content','subscript')" title="Alt Simge"><i class="fas fa-subscript"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${sectionId}_content','superscript')" title="Üst Simge"><i class="fas fa-superscript"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertHorizontalRuleInline('dynamic_section_${sectionId}_content')" title="Yatay Çizgi"><i class="fas fa-minus"></i></button>
+                            </div>
+                            <div class="btn-group me-2" role="group">
+                                <button type="button" class="btn btn-sm btn-primary" onclick="insertLinkInline('dynamic_section_${sectionId}_content')" title="Bağlantı Ekle"><i class="fas fa-link"></i><span class="d-none d-md-inline ms-1">Link</span></button>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="formatTextInline('dynamic_section_${sectionId}_content','unlink')" title="Bağlantıyı Kaldır"><i class="fas fa-unlink"></i></button>
+                            </div>
+                            <div class="btn-group me-2" role="group">
+                                <input type="file" id="dynamicFileInput_${sectionId}" style="display:none;" onchange="uploadEditorFileInline(this,'dynamic_section_${sectionId}_content')" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif">
+                                <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('dynamicFileInput_${sectionId}').click()" title="Dosya yükleyip içeriğe link olarak ekle"><i class="fas fa-upload"></i><span class="d-none d-md-inline ms-1">Dosya Yükle</span></button>
+                            </div>
+                            <div class="btn-group me-2" role="group">
+                                <button type="button" class="btn btn-sm btn-warning" onclick="removeFormattingInline('dynamic_section_${sectionId}_content')" title="Tüm biçimlendirmeyi kaldır"><i class="fas fa-eraser"></i><span class="d-none d-md-inline ms-1">Biçim Temizle</span></button>
+                            </div>
+                            <div class="btn-group me-2" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleSourceViewInline('dynamic_section_${sectionId}_content', this)" title="HTML kaynak kodunu görüntüle/düzenle"><i class="fas fa-code"></i><span class="d-none d-md-inline ms-1">Kaynak Kodu</span></button>
+                            </div>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${sectionId}_content','undo')" title="Geri Al"><i class="fas fa-undo"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="formatTextInline('dynamic_section_${sectionId}_content','redo')" title="İleri Al"><i class="fas fa-redo"></i></button>
+                            </div>
+                            <div class="btn-group ms-2" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="showTableModal('dynamic_section_${sectionId}_content')" title="Tablo Ekle"><i class="fas fa-table"></i></button>
+                            </div>
+                        </div>
+                        <div contenteditable="true" class="rich-editor-textarea-inline" id="dynamic_section_${sectionId}_content_editor" oninput="updateHiddenFieldInline('dynamic_section_${sectionId}_content')">
+                            ${content || '<p>Bu bölüm için içerik ekleyin...</p>'}
+                        </div>
+                        <textarea class="rich-editor-textarea" id="dynamic_section_${sectionId}_content_source" style="display:none; font-family: 'Courier New', monospace; font-size: 12px;" oninput="updateHiddenFieldInline('dynamic_section_${sectionId}_content')"></textarea>
+                        <textarea name="dynamic_section_${sectionId}_content" id="dynamic_section_${sectionId}_content_input" style="display:none;">${content || ''}</textarea>
+                    </div>
+                </div>
+            `;
         }
     </script>
 </body>

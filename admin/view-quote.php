@@ -29,6 +29,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
             $customer_fields = ['first_name', 'last_name', 'email', 'phone', 'company'];
             $quote_fields = ['origin', 'destination', 'weight', 'volume', 'pieces', 'cargo_type', 'trade_type', 'description', 'final_price', 'notes', 'services_content', 'optional_services_content', 'terms_content', 'unit_price', 'transport_process_text', 'start_date', 'delivery_date', 'additional_section1_title', 'additional_section1_content', 'additional_section2_title', 'additional_section2_content', 'transport_mode_id', 'custom_transport_name', 'intro_text', 'greeting_text', 'container_type', 'show_reference_images'];
 
+            // Özel alanlar - bunlar için özel handling gerekiyor
+            $special_fields = ['quote_price_label', 'quote_date', 'validity', 'transport_type',
+                              'custom_services_title', 'custom_transport_process_title', 'custom_terms_title',
+                              'custom_section_title'];
+
             if (in_array($field, $customer_fields)) {
                 // Müşteri bilgilerini güncelle
                 $stmt = $db->prepare("
@@ -89,6 +94,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                 // JSON olarak geri kaydet
                 $stmt = $db->prepare("UPDATE quotes SET custom_fields = ?, updated_at = NOW() WHERE quote_number = ?");
                 $stmt->execute([json_encode($custom_fields), $quote_number]);
+            } elseif (in_array($field, $special_fields)) {
+                // Özel alanlar için handling
+                if ($field === 'quote_price_label') {
+                    // Bu alan sadece görüntü amaçlı, veritabanında saklanmaz
+                    // Başarılı response döndür ama hiçbir şey yapma
+                } elseif ($field === 'quote_date') {
+                    // Teklif tarihi - created_at alanını güncelle
+                    $stmt = $db->prepare("UPDATE quotes SET created_at = ?, updated_at = NOW() WHERE quote_number = ?");
+                    $stmt->execute([$value, $quote_number]);
+                } elseif ($field === 'validity') {
+                    // Geçerlilik tarihi - valid_until alanını güncelle
+                    $stmt = $db->prepare("UPDATE quotes SET valid_until = ?, updated_at = NOW() WHERE quote_number = ?");
+                    $stmt->execute([$value, $quote_number]);
+                } elseif ($field === 'transport_type') {
+                    // Taşıma türü - custom_transport_name alanını güncelle
+                    $stmt = $db->prepare("UPDATE quotes SET custom_transport_name = ?, updated_at = NOW() WHERE quote_number = ?");
+                    $stmt->execute([$value, $quote_number]);
+                } elseif (in_array($field, ['custom_services_title', 'custom_transport_process_title', 'custom_terms_title', 'custom_section_title'])) {
+                    // Bu başlıklar JSON olarak custom_fields içinde saklanacak
+                    // Önce mevcut custom_fields'ı al
+                    $stmt = $db->prepare("SELECT custom_fields FROM quotes WHERE quote_number = ?");
+                    $stmt->execute([$quote_number]);
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    $custom_fields = [];
+                    if ($result && $result['custom_fields']) {
+                        $custom_fields = json_decode($result['custom_fields'], true) ?: [];
+                    }
+
+                    // Yeni değeri ekle/güncelle
+                    $custom_fields[$field] = $value;
+
+                    // JSON olarak geri kaydet
+                    $stmt = $db->prepare("UPDATE quotes SET custom_fields = ?, updated_at = NOW() WHERE quote_number = ?");
+                    $stmt->execute([json_encode($custom_fields), $quote_number]);
+                }
             } else {
                 throw new Exception('Bu alan düzenlenemez');
             }
@@ -635,6 +676,7 @@ function formatPriceWithCurrency($price, $currency) {
             display: flex;
             align-items: center;
             margin-bottom: 0;
+            position: relative;
         }
 
         .section-label {
@@ -645,6 +687,8 @@ function formatPriceWithCurrency($price, $currency) {
             font-size: 12px;
             min-width: 150px;
             text-align: center;
+            display: inline-block;
+            vertical-align: middle;
         }
 
         .section-title {
@@ -1945,13 +1989,31 @@ function formatPriceWithCurrency($price, $currency) {
 
         <!-- Content -->
         <div class="content">
+            <!-- Sıralama Kontrolleri -->
+            <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 14px; color: #666;">
+                    <i class="fas fa-info-circle"></i> Bölümleri sıralamak için sol taraftaki okları kullanın
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="resetSectionOrder()" title="Varsayılan sıralamaya dön">
+                    <i class="fas fa-undo"></i> Sıralamayı Sıfırla
+                </button>
+            </div>
+
             <!-- Information Section -->
             <div class="info-side">
 
                 <!-- Services Section -->
-                <div class="form-section">
+                <div class="form-section" data-section="services">
                     <div class="section-header">
-                        <div class="section-label"><?= $t['services'] ?></div>
+                        <div class="section-label">
+                            <span class="editable" data-field="custom_services_title" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
+                                  onclick="editField(this)" title="Düzenlemek için tıklayın">
+                                <?php
+                                $custom_fields = !empty($quote['custom_fields']) ? json_decode($quote['custom_fields'], true) : [];
+                                echo !empty($custom_fields['custom_services_title']) ? htmlspecialchars($custom_fields['custom_services_title']) : $t['services'];
+                                ?>
+                            </span>
+                        </div>
                         <div class="section-title"></div>
                     </div>
                     <div class="form-content">
@@ -2049,9 +2111,16 @@ function formatPriceWithCurrency($price, $currency) {
                 </div>
 
                 <!-- Transport Process -->
-                <div class="form-section">
+                <div class="form-section" data-section="transport_process">
                     <div class="section-header">
-                        <div class="section-label"><?= $is_english ? 'Transport Process' : 'Taşınma Süreci' ?></div>
+                        <div class="section-label">
+                            <span class="editable" data-field="custom_transport_process_title" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
+                                  onclick="editField(this)" title="Düzenlemek için tıklayın">
+                                <?php
+                                echo !empty($custom_fields['custom_transport_process_title']) ? htmlspecialchars($custom_fields['custom_transport_process_title']) : ($is_english ? 'Transport Process' : 'Taşınma Süreci');
+                                ?>
+                            </span>
+                        </div>
                         <div class="section-title"></div>
                     </div>
                     <div class="form-content">
@@ -2168,9 +2237,16 @@ function formatPriceWithCurrency($price, $currency) {
                 </div>
 
                 <!-- Terms Section -->
-                <div class="form-section">
+                <div class="form-section" data-section="terms">
                     <div class="section-header">
-                        <div class="section-label"><?= $t['terms'] ?></div>
+                        <div class="section-label">
+                            <span class="editable" data-field="custom_terms_title" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
+                                  onclick="editField(this)" title="Düzenlemek için tıklayın">
+                                <?php
+                                echo !empty($custom_fields['custom_terms_title']) ? htmlspecialchars($custom_fields['custom_terms_title']) : $t['terms'];
+                                ?>
+                            </span>
+                        </div>
                         <div class="section-title"></div>
                     </div>
                     <div class="form-content">
@@ -2208,7 +2284,7 @@ function formatPriceWithCurrency($price, $currency) {
 
                 <!-- Additional Section 1 -->
                 <?php if (!empty($quote['additional_section1_title']) || !empty($quote['additional_section1_content'])): ?>
-                <div class="form-section" id="additional-section-1">
+                <div class="form-section" id="additional-section-1" data-section="additional1">
                     <div class="section-header" style="position: relative;">
                         <div class="section-label editable" data-field="additional_section1_title" data-quote-id="<?php echo $quote['quote_number']; ?>" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;" onclick="editField(this)" title="Düzenlemek için tıklayın">
                             <?php echo htmlspecialchars(isset($quote['additional_section1_title']) && !empty($quote['additional_section1_title']) ? $quote['additional_section1_title'] : 'Ek Bölüm 1'); ?>
@@ -2249,7 +2325,7 @@ function formatPriceWithCurrency($price, $currency) {
 
                 <!-- Additional Section 2 -->
                 <?php if (!empty($quote['additional_section2_title']) || !empty($quote['additional_section2_content'])): ?>
-                <div class="form-section" id="additional-section-2">
+                <div class="form-section" id="additional-section-2" data-section="additional2">
                     <div class="section-header" style="position: relative;">
                         <div class="section-label editable" data-field="additional_section2_title" data-quote-id="<?php echo $quote['quote_number']; ?>" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;" onclick="editField(this)" title="Düzenlemek için tıklayın">
                             <?php echo htmlspecialchars(isset($quote['additional_section2_title']) && !empty($quote['additional_section2_title']) ? $quote['additional_section2_title'] : 'Ek Bölüm 2'); ?>
@@ -3892,8 +3968,20 @@ function formatPriceWithCurrency($price, $currency) {
             input.focus();
             input.select();
 
+            let isProcessing = false;
+
             const saveEdit = () => {
+                if (isProcessing) return;
+                isProcessing = true;
+
                 const newValue = input.value.trim();
+
+                // Element hala DOM'da mı kontrol et
+                if (!document.body.contains(element)) {
+                    console.warn('Element DOM\'dan kaldırılmış');
+                    return;
+                }
+
                 element.classList.remove('editing');
 
                 if (newValue && newValue !== cleanValue) {
@@ -3908,15 +3996,32 @@ function formatPriceWithCurrency($price, $currency) {
             };
 
             const cancelEdit = () => {
+                if (isProcessing) return;
+                isProcessing = true;
+
+                // Element hala DOM'da mı kontrol et
+                if (!document.body.contains(element)) {
+                    console.warn('Element DOM\'dan kaldırılmış');
+                    return;
+                }
+
                 element.classList.remove('editing');
                 element.innerHTML = originalContent;
             };
 
-            input.addEventListener('blur', saveEdit);
+            input.addEventListener('blur', (e) => {
+                // Küçük bir gecikme ekle ki keydown event'i önce tetiklensin
+                setTimeout(() => {
+                    if (!isProcessing) {
+                        saveEdit();
+                    }
+                }, 100);
+            });
+
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    saveEdit();
+                    input.blur(); // blur event'ini tetikle
                 } else if (e.key === 'Escape') {
                     e.preventDefault();
                     cancelEdit();
@@ -4180,18 +4285,24 @@ function formatPriceWithCurrency($price, $currency) {
                 generalInfoRowCounter = maxRowNumber;
 
                 if (fieldPairs.length > 0) {
+                    // Separator'ın kaldırılıp kaldırılmadığını kontrol et
+                    const isHidden = localStorage.getItem(`quote_custom_separator_hidden_${quoteId}`) === 'true';
+
+                    if (!isHidden) {
                     // İlk custom field'dan önce ayırıcı ekle
                     const separatorHtml = `
                         <!-- Ayırıcı Başlık ve Çizgi -->
                         <div data-separator="custom-fields" style="grid-column: 1 / -1; display: flex; align-items: center; margin: 15px 0 10px 0;">
                             <span class="editable" data-field="custom_section_title" data-quote-id="${quoteId}" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; font-weight: 600; color: #2c5aa0; font-size: 14px; white-space: nowrap;" onclick="editField(this)" title="Başlığı düzenlemek için tıklayın">
-                                Ek olarak:
+                                ${customFields.custom_section_title || 'Ek olarak:'}
                                 <span class="edit-indicator"></span>
                             </span>
+                                <button type="button" class="btn btn-sm btn-link" onclick="removeCustomSeparator(this)" title="Başlığı kaldır" style="margin-left: 8px; color: #dc3545; text-decoration: none; padding: 2px 6px;">×</button>
                             <div style="flex: 1; height: 1px; background: #ddd; margin-left: 15px;"></div>
                         </div>
                     `;
                     container.insertAdjacentHTML('beforeend', separatorHtml);
+                    }
                 }
 
                 fieldPairs.forEach(pair => {
@@ -4244,9 +4355,220 @@ function formatPriceWithCurrency($price, $currency) {
             }
         }
 
-        // Sayfa yüklendiğinde custom alanları yükle
+        // Custom separator kaldırma fonksiyonu
+        function removeCustomSeparator(button) {
+            const separator = button.closest('[data-separator="custom-fields"]');
+            if (separator) {
+                separator.remove();
+                // LocalStorage'a kaydet ki tekrar gösterilmesin
+                const quoteId = '<?php echo $quote['quote_number']; ?>';
+                localStorage.setItem(`quote_custom_separator_hidden_${quoteId}`, 'true');
+            }
+        }
+
+        // Sıralamayı sıfırla fonksiyonu
+        function resetSectionOrder() {
+            const container = document.querySelector('.content .info-side');
+            if (!container) return;
+
+            // LocalStorage'dan sıralamayı sil
+            const quoteId = '<?php echo $quote['quote_number']; ?>';
+            localStorage.removeItem(`quote_section_order_${quoteId}`);
+
+            // Varsayılan sıralama
+            const defaultOrder = ['services', 'transport_process', 'terms', 'additional1', 'additional2'];
+
+            // Bölümleri varsayılan sıraya göre yeniden düzenle
+            defaultOrder.forEach(sectionKey => {
+                const section = container.querySelector(`.form-section[data-section="${sectionKey}"]`);
+                if (section) {
+                    container.appendChild(section);
+                }
+            });
+
+            // Numaraları güncelle
+            updateSectionNumbers();
+
+            // Kullanıcıya bilgi ver
+            showAlert('Sıralama varsayılan haline döndürüldü', 'success');
+        }
+
+        // Alert gösterme fonksiyonu (eğer yoksa)
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+
+            // 3 saniye sonra otomatik kapat
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
+
+        // Sıralama sistemi için fonksiyonlar
+        function initSectionOrdering() {
+            const container = document.querySelector('.content .info-side');
+            if (!container) return;
+
+            // Tüm section'lara sıra numarası ve kontroller ekle
+            const sections = container.querySelectorAll('.form-section[data-section]');
+            sections.forEach((section, index) => {
+                // Sıra kontrollerini ekle - section-label'ın sağına
+                const sectionLabel = section.querySelector('.section-label');
+                if (sectionLabel && !section.querySelector('.section-order-controls')) {
+                    const controls = document.createElement('div');
+                    controls.className = 'section-order-controls';
+                    controls.style.cssText = 'display: inline-flex; flex-direction: column; gap: 1px; margin-left: 8px; vertical-align: top;';
+                    controls.innerHTML = `
+                        <button type="button" class="btn btn-sm section-order-btn" onclick="moveSection(this, -1)" title="Yukarı taşı"
+                                style="padding: 1px 5px; height: 18px; line-height: 1; background: rgba(255,255,255,0.9); border: 1px solid #ddd; border-radius: 2px; transition: all 0.2s;"
+                                onmouseover="this.style.background='#fff'; this.style.borderColor='#999';" onmouseout="this.style.background='rgba(255,255,255,0.9)'; this.style.borderColor='#ddd';">
+                            <i class="fas fa-chevron-up" style="font-size: 9px; color: #666;"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm section-order-btn" onclick="moveSection(this, 1)" title="Aşağı taşı"
+                                style="padding: 1px 5px; height: 18px; line-height: 1; background: rgba(255,255,255,0.9); border: 1px solid #ddd; border-radius: 2px; transition: all 0.2s;"
+                                onmouseover="this.style.background='#fff'; this.style.borderColor='#999';" onmouseout="this.style.background='rgba(255,255,255,0.9)'; this.style.borderColor='#ddd';">
+                            <i class="fas fa-chevron-down" style="font-size: 9px; color: #666;"></i>
+                        </button>
+                    `;
+                    // Section-label'ın yanına ekle
+                    sectionLabel.style.display = 'inline-block';
+                    sectionLabel.parentNode.insertBefore(controls, sectionLabel.nextSibling);
+                }
+            });
+
+            // LocalStorage'dan sıralamayı yükle
+            loadSectionOrder();
+        }
+
+        function moveSection(button, direction) {
+            const section = button.closest('.form-section');
+            const container = section.parentElement;
+            const sections = Array.from(container.querySelectorAll('.form-section[data-section]'));
+            const currentIndex = sections.indexOf(section);
+            const newIndex = currentIndex + direction;
+
+            if (newIndex >= 0 && newIndex < sections.length) {
+                if (direction === -1) {
+                    // Yukarı taşı
+                    container.insertBefore(section, sections[newIndex]);
+                } else {
+                    // Aşağı taşı
+                    if (sections[newIndex + 1]) {
+                        container.insertBefore(section, sections[newIndex + 1]);
+                    } else {
+                        container.appendChild(section);
+                    }
+                }
+
+                // Numaraları güncelle
+                updateSectionNumbers();
+                // Sıralamayı kaydet
+                saveSectionOrder();
+            }
+        }
+
+        function updateSectionNumbers() {
+            const container = document.querySelector('.content .info-side');
+            if (!container) return;
+
+            const sections = container.querySelectorAll('.form-section[data-section]');
+            sections.forEach((section, index) => {
+                // İlk ve son elemanlar için butonları devre dışı bırak
+                const upButton = section.querySelector('button[onclick*="moveSection(this, -1)"]');
+                const downButton = section.querySelector('button[onclick*="moveSection(this, 1)"]');
+
+                if (upButton) {
+                    upButton.disabled = (index === 0);
+                    upButton.style.opacity = (index === 0) ? '0.3' : '1';
+                    upButton.style.cursor = (index === 0) ? 'not-allowed' : 'pointer';
+                    if (index === 0) {
+                        upButton.onmouseover = null;
+                        upButton.onmouseout = null;
+                        upButton.style.background = 'rgba(255,255,255,0.5)';
+                        upButton.style.borderColor = '#e0e0e0';
+                    } else {
+                        upButton.onmouseover = function() {
+                            this.style.background='#fff';
+                            this.style.borderColor='#999';
+                        };
+                        upButton.onmouseout = function() {
+                            this.style.background='rgba(255,255,255,0.9)';
+                            this.style.borderColor='#ddd';
+                        };
+                        upButton.style.background = 'rgba(255,255,255,0.9)';
+                        upButton.style.borderColor = '#ddd';
+                    }
+                }
+
+                if (downButton) {
+                    downButton.disabled = (index === sections.length - 1);
+                    downButton.style.opacity = (index === sections.length - 1) ? '0.3' : '1';
+                    downButton.style.cursor = (index === sections.length - 1) ? 'not-allowed' : 'pointer';
+                    if (index === sections.length - 1) {
+                        downButton.onmouseover = null;
+                        downButton.onmouseout = null;
+                        downButton.style.background = 'rgba(255,255,255,0.5)';
+                        downButton.style.borderColor = '#e0e0e0';
+                    } else {
+                        downButton.onmouseover = function() {
+                            this.style.background='#fff';
+                            this.style.borderColor='#999';
+                        };
+                        downButton.onmouseout = function() {
+                            this.style.background='rgba(255,255,255,0.9)';
+                            this.style.borderColor='#ddd';
+                        };
+                        downButton.style.background = 'rgba(255,255,255,0.9)';
+                        downButton.style.borderColor = '#ddd';
+                    }
+                }
+            });
+        }
+
+        function saveSectionOrder() {
+            const container = document.querySelector('.content .info-side');
+            if (!container) return;
+
+            const order = Array.from(container.querySelectorAll('.form-section[data-section]'))
+                .map(section => section.getAttribute('data-section'));
+
+            const quoteId = '<?php echo $quote['quote_number']; ?>';
+            localStorage.setItem(`quote_section_order_${quoteId}`, JSON.stringify(order));
+        }
+
+        function loadSectionOrder() {
+            const container = document.querySelector('.content .info-side');
+            if (!container) return;
+
+            const quoteId = '<?php echo $quote['quote_number']; ?>';
+            const savedOrder = localStorage.getItem(`quote_section_order_${quoteId}`);
+
+            if (savedOrder) {
+                try {
+                    const order = JSON.parse(savedOrder);
+                    order.forEach(sectionKey => {
+                        const section = container.querySelector(`.form-section[data-section="${sectionKey}"]`);
+                        if (section) {
+                            container.appendChild(section);
+                        }
+                    });
+                    updateSectionNumbers();
+                } catch (e) {
+                    console.error('Sıralama yüklenirken hata:', e);
+                }
+            }
+        }
+
+        // Sayfa yüklendiğinde custom alanları ve sıralama sistemini yükle
         document.addEventListener('DOMContentLoaded', function() {
             loadExistingCustomFields();
+            initSectionOrdering();
         });
 
         function addGeneralInfoRow() {
@@ -4263,17 +4585,24 @@ function formatPriceWithCurrency($price, $currency) {
             const hasSeparator = container.querySelector('[data-separator="custom-fields"]');
 
             if (existingCustomFields.length === 0 && !hasSeparator) {
+                // Separator'ın kaldırılıp kaldırılmadığını kontrol et
+                const quoteId = '<?php echo $quote['quote_number']; ?>';
+                const isHidden = localStorage.getItem(`quote_custom_separator_hidden_${quoteId}`) === 'true';
+
+                if (!isHidden) {
                 const separatorHtml = `
                     <!-- Ayırıcı Başlık ve Çizgi -->
                     <div data-separator="custom-fields" style="grid-column: 1 / -1; display: flex; align-items: center; margin: 15px 0 10px 0;">
                         <span class="editable" data-field="custom_section_title" data-quote-id="<?php echo $quote['quote_number']; ?>" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; font-weight: 600; color: #2c5aa0; font-size: 14px; white-space: nowrap;" onclick="editField(this)" title="Başlığı düzenlemek için tıklayın">
-                            Ek olarak:
+                                <?php echo !empty($custom_fields['custom_section_title']) ? htmlspecialchars($custom_fields['custom_section_title']) : 'Ek olarak:'; ?>
                             <span class="edit-indicator"></span>
                         </span>
+                            <button type="button" class="btn btn-sm btn-link" onclick="removeCustomSeparator(this)" title="Başlığı kaldır" style="margin-left: 8px; color: #dc3545; text-decoration: none; padding: 2px 6px;">×</button>
                         <div style="flex: 1; height: 1px; background: #ddd; margin-left: 15px;"></div>
                     </div>
                 `;
                 container.insertAdjacentHTML('beforeend', separatorHtml);
+                }
             }
 
             const rowHtml = `

@@ -1022,7 +1022,7 @@ function formatPriceWithCurrency($price, $currency) {
             <div class="info-side">
 
                 <!-- Services Section -->
-                <div class="form-section">
+                <div class="form-section" data-section="services">
                     <div class="section-header">
                         <div class="section-label"><?= $t['services'] ?></div>
                         <div class="section-title"></div>
@@ -1077,7 +1077,7 @@ function formatPriceWithCurrency($price, $currency) {
                 </div>
 
                 <!-- Transport Process -->
-                <div class="form-section">
+                <div class="form-section" data-section="transport_process">
                     <div class="section-header">
                         <div class="section-label"><?= $is_english ? 'Transport Process' : 'Taşınma Süreci' ?></div>
                         <div class="section-title"></div>
@@ -1187,7 +1187,7 @@ function formatPriceWithCurrency($price, $currency) {
                 </div>
 
                 <!-- Terms Section -->
-                <div class="form-section">
+                <div class="form-section" data-section="terms">
                     <div class="section-header">
                         <div class="section-label"><?= $t['terms'] ?></div>
                         <div class="section-title"></div>
@@ -1222,7 +1222,7 @@ function formatPriceWithCurrency($price, $currency) {
 
                 <!-- Additional Section 1 -->
                 <?php if (!empty($quote['additional_section1_title']) || !empty($quote['additional_section1_content'])): ?>
-                <div class="form-section">
+                <div class="form-section" data-section="additional1">
                     <div class="section-header">
                         <div class="section-label"><?= htmlspecialchars($quote['additional_section1_title'] ?? 'Ek Bölüm 1') ?></div>
                         <div class="section-title"></div>
@@ -1255,7 +1255,7 @@ function formatPriceWithCurrency($price, $currency) {
 
                 <!-- Additional Section 2 -->
                 <?php if (!empty($quote['additional_section2_title']) || !empty($quote['additional_section2_content'])): ?>
-                <div class="form-section">
+                <div class="form-section" data-section="additional2">
                     <div class="section-header">
                         <div class="section-label"><?= htmlspecialchars($quote['additional_section2_title'] ?? 'Ek Bölüm 2') ?></div>
                         <div class="section-title"></div>
@@ -1306,9 +1306,53 @@ function formatPriceWithCurrency($price, $currency) {
     </div>
 
     <script>
+        // Sıralamayı uygula
+        function applySectionOrder() {
+            const quoteNumber = '<?php echo $quote['quote_number']; ?>';
+            const savedOrder = localStorage.getItem(`quote_section_order_${quoteNumber}`);
+
+            if (savedOrder) {
+                try {
+                    const order = JSON.parse(savedOrder);
+                    const container = document.querySelector('.info-side');
+                    if (!container) return;
+
+                    // Mevcut section'ları al
+                    const sections = Array.from(container.querySelectorAll('.form-section[data-section]'));
+                    const sectionMap = {};
+
+                    // Section'ları map'e ekle
+                    sections.forEach(section => {
+                        const sectionId = section.getAttribute('data-section');
+                        if (sectionId) {
+                            sectionMap[sectionId] = section;
+                        }
+                    });
+
+                    // Sıralamaya göre yeniden düzenle
+                    order.forEach(sectionId => {
+                        if (sectionMap[sectionId]) {
+                            container.appendChild(sectionMap[sectionId]);
+                        }
+                    });
+
+                    // Sıralamada olmayan section'ları sona ekle
+                    sections.forEach(section => {
+                        const sectionId = section.getAttribute('data-section');
+                        if (sectionId && !order.includes(sectionId)) {
+                            container.appendChild(section);
+                        }
+                    });
+                } catch (e) {
+                    console.error('Sıralama uygulanamadı:', e);
+                }
+            }
+        }
+
         // Load existing additional costs on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadAdditionalCosts();
+            applySectionOrder(); // Sıralamayı uygula
         });
 
         // Load additional costs from server (view only)
