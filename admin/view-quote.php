@@ -130,6 +130,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                     // Geçerlilik tarihi - valid_until alanını güncelle
                     $stmt = $db->prepare("UPDATE quotes SET valid_until = ?, updated_at = NOW() WHERE quote_number = ?");
                     $stmt->execute([$value, $quote_number]);
+                } elseif ($field === 'start_date') {
+                    // Teslim tarihi başlangıç - start_date alanını güncelle
+                    $stmt = $db->prepare("UPDATE quotes SET start_date = ?, updated_at = NOW() WHERE quote_number = ?");
+                    $stmt->execute([$value, $quote_number]);
+                } elseif ($field === 'delivery_date') {
+                    // Teslim tarihi bitiş - delivery_date alanını güncelle
+                    $stmt = $db->prepare("UPDATE quotes SET delivery_date = ?, updated_at = NOW() WHERE quote_number = ?");
+                    $stmt->execute([$value, $quote_number]);
                 } elseif ($field === 'transport_type') {
                     // Taşıma türü - custom_transport_name alanını güncelle
                     $stmt = $db->prepare("UPDATE quotes SET custom_transport_name = ?, updated_at = NOW() WHERE quote_number = ?");
