@@ -807,10 +807,12 @@ function formatPriceWithCurrency($price, $currency) {
                         <span style="font-size: 9px;"><?php echo formatDate($quote['created_at']); ?></span>
                     </div>
 
+                    <?php if (!empty($quote['valid_until']) && $quote['valid_until'] !== '0000-00-00'): ?>
                     <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
                         <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['validity'] ?>:</span>
                         <span style="font-size: 9px;"><?php echo formatDate($quote['valid_until']); ?></span>
                     </div>
+                    <?php endif; ?>
 
                     <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
                         <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['transport_type'] ?>:</span>
@@ -1053,7 +1055,7 @@ function formatPriceWithCurrency($price, $currency) {
                             $services_content = str_replace('{volume}', number_format($quote['volume'] ?? 0, 2, ',', '.'), $services_content);
                             $services_content = str_replace('{pieces}', $quote['pieces'] ?? $t['not_specified'], $services_content);
                             $services_content = str_replace('{price}', formatPriceWithCurrency($quote['final_price'], $currency), $services_content);
-                            $services_content = str_replace('{valid_until}', formatDate($quote['valid_until']), $services_content);
+                            $services_content = str_replace('{valid_until}', (!empty($quote['valid_until']) && $quote['valid_until'] !== '0000-00-00') ? formatDate($quote['valid_until']) : $t['not_specified'], $services_content);
                             $services_content = str_replace('{cargo_type}', $quote['cargo_type'] ?? 'Genel', $services_content);
                             $services_content = str_replace('{trade_type}', $quote['trade_type'] ?? '', $services_content);
                             $services_content = str_replace('{start_date}', $quote['start_date'] ? formatDate($quote['start_date']) : $t['not_specified'], $services_content);
@@ -1218,7 +1220,7 @@ function formatPriceWithCurrency($price, $currency) {
                             $terms_content = str_replace('{volume}', number_format($quote['volume'] ?? 0, 2, ',', '.'), $terms_content);
                             $terms_content = str_replace('{pieces}', $quote['pieces'] ?? $t['not_specified'], $terms_content);
                             $terms_content = str_replace('{price}', formatPriceWithCurrency($quote['final_price'], $currency), $terms_content);
-                            $terms_content = str_replace('{valid_until}', formatDate($quote['valid_until']), $terms_content);
+                            $terms_content = str_replace('{valid_until}', (!empty($quote['valid_until']) && $quote['valid_until'] !== '0000-00-00') ? formatDate($quote['valid_until']) : $t['not_specified'], $terms_content);
                             $terms_content = str_replace('{cargo_type}', $quote['cargo_type'] ?? 'Genel', $terms_content);
                             $terms_content = str_replace('{trade_type}', $quote['trade_type'] ?? '', $terms_content);
                             $terms_content = str_replace('{start_date}', $quote['start_date'] ? formatDate($quote['start_date']) : $t['not_specified'], $terms_content);
@@ -1250,7 +1252,7 @@ function formatPriceWithCurrency($price, $currency) {
                             $additional_content1 = str_replace('{volume}', number_format($quote['volume'] ?? 0, 2, ',', '.'), $additional_content1);
                             $additional_content1 = str_replace('{pieces}', $quote['pieces'] ?? $t['not_specified'], $additional_content1);
                             $additional_content1 = str_replace('{price}', formatPriceWithCurrency($quote['final_price'], $currency), $additional_content1);
-                            $additional_content1 = str_replace('{valid_until}', formatDate($quote['valid_until']), $additional_content1);
+                            $additional_content1 = str_replace('{valid_until}', (!empty($quote['valid_until']) && $quote['valid_until'] !== '0000-00-00') ? formatDate($quote['valid_until']) : $t['not_specified'], $additional_content1);
                             $additional_content1 = str_replace('{cargo_type}', $quote['cargo_type'] ?? 'Genel', $additional_content1);
                             $additional_content1 = str_replace('{trade_type}', $quote['trade_type'] ?? '', $additional_content1);
                             $additional_content1 = str_replace('{start_date}', $quote['start_date'] ? formatDate($quote['start_date']) : $t['not_specified'], $additional_content1);
@@ -1283,7 +1285,7 @@ function formatPriceWithCurrency($price, $currency) {
                             $additional_content2 = str_replace('{volume}', number_format($quote['volume'] ?? 0, 2, ',', '.'), $additional_content2);
                             $additional_content2 = str_replace('{pieces}', $quote['pieces'] ?? $t['not_specified'], $additional_content2);
                             $additional_content2 = str_replace('{price}', formatPriceWithCurrency($quote['final_price'], $currency), $additional_content2);
-                            $additional_content2 = str_replace('{valid_until}', formatDate($quote['valid_until']), $additional_content2);
+                            $additional_content2 = str_replace('{valid_until}', (!empty($quote['valid_until']) && $quote['valid_until'] !== '0000-00-00') ? formatDate($quote['valid_until']) : $t['not_specified'], $additional_content2);
                             $additional_content2 = str_replace('{cargo_type}', $quote['cargo_type'] ?? 'Genel', $additional_content2);
                             $additional_content2 = str_replace('{trade_type}', $quote['trade_type'] ?? '', $additional_content2);
                             $additional_content2 = str_replace('{start_date}', $quote['start_date'] ? formatDate($quote['start_date']) : $t['not_specified'], $additional_content2);

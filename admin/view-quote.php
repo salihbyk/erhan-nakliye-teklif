@@ -1925,7 +1925,13 @@ function formatPriceWithCurrency($price, $currency) {
                                 <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['validity'] ?>:</span>
                                 <span class="editable" data-field="validity" data-type="date" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
                                       onclick="editField(this)" title="Düzenlemek için tıklayın">
-                                    <?php echo formatDate($quote['valid_until']); ?>
+                                    <?php 
+                                    if (!empty($quote['valid_until']) && $quote['valid_until'] !== '0000-00-00') {
+                                        echo formatDate($quote['valid_until']);
+                                    } else {
+                                        echo '<span style="color: #999; font-style: italic;">Belirtilmedi (tıklayarak ekleyin)</span>';
+                                    }
+                                    ?>
                                 </span>
                             </div>
 
