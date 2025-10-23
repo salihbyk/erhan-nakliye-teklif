@@ -6,6 +6,62 @@ require_once '../includes/functions.php';
 session_start();
 checkAdminSession();
 
+// JSON request handling for inline editing
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    if ($input && isset($input['quote_id']) && isset($input['field']) && isset($input['value'])) {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        try {
+            $database = new Database();
+            $db = $database->getConnection();
+            
+            $quote_id = $input['quote_id'];
+            $field = $input['field'];
+            $value = $input['value'];
+            
+            // Get quote_number from quote_id
+            $stmt = $db->prepare("SELECT quote_number FROM quotes WHERE id = ?");
+            $stmt->execute([$quote_id]);
+            $quote = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$quote) {
+                echo json_encode(['success' => false, 'error' => 'Teklif bulunamadı']);
+                exit;
+            }
+            
+            $quote_number = $quote['quote_number'];
+            
+            // Tarih alanları için özel handling
+            if ($field === 'quote_date') {
+                $stmt = $db->prepare("UPDATE quotes SET created_at = ?, updated_at = NOW() WHERE quote_number = ?");
+                $stmt->execute([$value, $quote_number]);
+            } elseif ($field === 'validity') {
+                $stmt = $db->prepare("UPDATE quotes SET valid_until = ?, updated_at = NOW() WHERE quote_number = ?");
+                $stmt->execute([$value, $quote_number]);
+            } elseif ($field === 'start_date') {
+                $stmt = $db->prepare("UPDATE quotes SET start_date = ?, updated_at = NOW() WHERE quote_number = ?");
+                $stmt->execute([$value, $quote_number]);
+            } elseif ($field === 'delivery_date') {
+                $stmt = $db->prepare("UPDATE quotes SET delivery_date = ?, updated_at = NOW() WHERE quote_number = ?");
+                $stmt->execute([$value, $quote_number]);
+            } else {
+                // Diğer alanlar için genel handling eklenebilir
+                echo json_encode(['success' => false, 'error' => 'Bu alan şu anda düzenlenemiyor: ' . $field]);
+                exit;
+            }
+            
+            echo json_encode(['success' => true, 'message' => 'Güncellendi']);
+            exit;
+            
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            exit;
+        }
+    }
+}
+
 // AJAX custom field management
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
     header('Content-Type: application/json; charset=utf-8');

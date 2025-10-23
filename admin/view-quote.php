@@ -1923,7 +1923,7 @@ function formatPriceWithCurrency($price, $currency) {
 
                             <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
                                 <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['validity'] ?>:</span>
-                                <span class="editable" data-field="validity" data-type="date" 
+                                <span class="editable" data-field="validity" data-type="date"
                                       data-empty="<?php echo (empty($quote['valid_until']) || $quote['valid_until'] === '0000-00-00') ? '1' : '0'; ?>"
                                       style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; <?php if (empty($quote['valid_until']) || $quote['valid_until'] === '0000-00-00') echo 'color: #999; font-style: italic;'; ?>"
                                       onclick="editField(this)" title="Düzenlemek için tıklayın">
@@ -3042,9 +3042,9 @@ function formatPriceWithCurrency($price, $currency) {
                                    currentValue.includes('m³') ? ' m³' : '';
                         element.innerHTML = formatted + unit;
                     } else if (type === 'date') {
-                        // Tarih formatını geri çevir
-                        const date = new Date(newValue);
-                        const formatted = date.toLocaleDateString('tr-TR');
+                        // Tarih formatını geri çevir (YYYY-MM-DD -> DD.MM.YYYY)
+                        const [year, month, day] = newValue.split('-');
+                        const formatted = `${day}.${month}.${year}`;
                         element.innerHTML = formatted;
                         // data-empty attribute'unu kaldır ve style'ı güncelle
                         element.setAttribute('data-empty', '0');
