@@ -1774,6 +1774,15 @@ function formatPriceWithCurrency($price, $currency) {
                                 </span>
                             </div>
 
+                            <?php if (!empty($quote['description'])): ?>
+                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; margin-bottom: 8px; min-height: 24px;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['description'] ?>:</span>
+                                <span style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; line-height: 1.6; word-wrap: break-word; white-space: normal;">
+                                    <?php echo nl2br(htmlspecialchars($quote['description'])); ?>
+                                </span>
+                            </div>
+                            <?php endif; ?>
+
                             <?php if (strtolower($quote['transport_name']) === 'havayolu' && !empty($quote['weight'])): ?>
                             <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
                                 <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['weight'] ?>:</span>
@@ -1839,15 +1848,6 @@ function formatPriceWithCurrency($price, $currency) {
                                 <span     style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
                                        >
                                     <?php echo number_format($quote['volume'], 2, ',', '.'); ?> m³
-                                </span>
-                            </div>
-                            <?php endif; ?>
-
-                            <?php if (!empty($quote['description'])): ?>
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; margin-bottom: 8px; min-height: 24px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e8f0fe;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['description'] ?>:</span>
-                                <span style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; line-height: 1.6; white-space: pre-wrap;">
-                                    <?php echo nl2br(htmlspecialchars($quote['description'])); ?>
                                 </span>
                             </div>
                             <?php endif; ?>

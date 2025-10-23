@@ -1929,6 +1929,16 @@ function formatPriceWithCurrency($price, $currency) {
                                 </span>
                             </div>
 
+                            <?php if (!empty($quote['description'])): ?>
+                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; margin-bottom: 8px; min-height: 24px;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['description'] ?>:</span>
+                                <span class="editable" data-field="description" data-type="textarea" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; line-height: 1.6; word-wrap: break-word; white-space: normal;"
+                                      onclick="editField(this)" title="Düzenlemek için tıklayın">
+                                    <?php echo nl2br(htmlspecialchars($quote['description'])); ?>
+                                </span>
+                            </div>
+                            <?php endif; ?>
+
                             <?php if (strtolower($quote['transport_name']) === 'havayolu'): ?>
                             <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
                                 <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['weight'] ?>:</span>
@@ -1993,16 +2003,6 @@ function formatPriceWithCurrency($price, $currency) {
                                     <?php echo !empty($quote['volume']) ? number_format($quote['volume'], 2, ',', '.') . ' m³' : ($is_english ? 'Click to add volume' : 'Hacim eklemek için tıklayın'); ?>
                                 </span>
                             </div>
-
-                            <?php if (!empty($quote['description'])): ?>
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; margin-bottom: 8px; min-height: 24px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e8f0fe;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['description'] ?>:</span>
-                                <span class="editable" data-field="description" data-type="textarea" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; line-height: 1.6; white-space: pre-wrap;"
-                                      onclick="editField(this)" title="Düzenlemek için tıklayın">
-                                    <?php echo nl2br(htmlspecialchars($quote['description'])); ?>
-                                </span>
-                            </div>
-                            <?php endif; ?>
 
                         </div>
 

@@ -289,7 +289,7 @@ class GitPackageCreator {
         // setup/ klasöründeki migration dosyalarını bul
         $migrations = [];
         $setupDir = $dir . '/setup';
-        
+
         if (is_dir($setupDir)) {
             $files = scandir($setupDir);
             foreach ($files as $file) {
@@ -298,7 +298,7 @@ class GitPackageCreator {
                 }
             }
         }
-        
+
         // Config array oluştur
         $config = [
             'version' => $this->version,
@@ -368,7 +368,7 @@ class GitPackageCreator {
                 'Veritabanı migration\'ları otomatik olarak çalıştırılacaktır'
             ]
         ];
-        
+
         file_put_contents(
             $dir . '/update_config.json',
             json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)

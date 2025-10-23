@@ -177,7 +177,7 @@ if ($_POST['action'] === 'install_update' && isset($_FILES['update_package'])) {
                 if (file_exists($migrationPath)) {
                     // Migration dosyasını include et ve çalıştır
                     require_once $migrationPath;
-                    
+
                     // Migration fonksiyonunu çağır
                     $functionName = 'runMigration_' . str_replace(['.php', '-'], ['', '_'], $migration);
                     if (function_exists($functionName)) {
