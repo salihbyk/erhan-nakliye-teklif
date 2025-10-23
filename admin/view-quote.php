@@ -1923,13 +1923,15 @@ function formatPriceWithCurrency($price, $currency) {
 
                             <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
                                 <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['validity'] ?>:</span>
-                                <span class="editable" data-field="validity" data-type="date" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
+                                <span class="editable" data-field="validity" data-type="date" 
+                                      data-empty="<?php echo (empty($quote['valid_until']) || $quote['valid_until'] === '0000-00-00') ? '1' : '0'; ?>"
+                                      style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; <?php if (empty($quote['valid_until']) || $quote['valid_until'] === '0000-00-00') echo 'color: #999; font-style: italic;'; ?>"
                                       onclick="editField(this)" title="Düzenlemek için tıklayın">
-                                    <?php 
+                                    <?php
                                     if (!empty($quote['valid_until']) && $quote['valid_until'] !== '0000-00-00') {
                                         echo formatDate($quote['valid_until']);
                                     } else {
-                                        echo '<span style="color: #999; font-style: italic;">Belirtilmedi (tıklayarak ekleyin)</span>';
+                                        echo 'Tarih giriniz';
                                     }
                                     ?>
                                 </span>
@@ -2963,6 +2965,7 @@ function formatPriceWithCurrency($price, $currency) {
             const field = element.getAttribute('data-field');
             const type = element.getAttribute('data-type') || 'text';
             const step = element.getAttribute('data-step');
+            const isEmpty = element.getAttribute('data-empty') === '1';
             const currentValue = element.textContent.trim();
 
             // Değeri temizle (örn: "1.500 kg" -> "1500")
@@ -2970,10 +2973,20 @@ function formatPriceWithCurrency($price, $currency) {
             if (type === 'number') {
                 cleanValue = currentValue.replace(/[^\d.,]/g, '').replace(',', '.');
             } else if (type === 'date') {
-                // Tarih formatını dönüştür
-                const dateParts = currentValue.split('.');
-                if (dateParts.length === 3) {
-                    cleanValue = `${dateParts[2]}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}`;
+                // Eğer tarih boşsa bugünün tarihini kullan
+                if (isEmpty || currentValue === 'Tarih giriniz') {
+                    const today = new Date();
+                    cleanValue = today.toISOString().split('T')[0];
+                } else {
+                    // Tarih formatını dönüştür (dd.mm.yyyy -> yyyy-mm-dd)
+                    const dateParts = currentValue.split('.');
+                    if (dateParts.length === 3) {
+                        cleanValue = `${dateParts[2]}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}`;
+                    } else {
+                        // Format geçersizse bugünün tarihini kullan
+                        const today = new Date();
+                        cleanValue = today.toISOString().split('T')[0];
+                    }
                 }
             }
 
@@ -3033,6 +3046,10 @@ function formatPriceWithCurrency($price, $currency) {
                         const date = new Date(newValue);
                         const formatted = date.toLocaleDateString('tr-TR');
                         element.innerHTML = formatted;
+                        // data-empty attribute'unu kaldır ve style'ı güncelle
+                        element.setAttribute('data-empty', '0');
+                        element.style.color = '';
+                        element.style.fontStyle = '';
                     } else {
                         element.innerHTML = newValue;
                     }
