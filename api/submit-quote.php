@@ -101,7 +101,7 @@ try {
             'description' => $input['description'] ?? null,
             'calculated_price' => $default_price,
             'final_price' => $default_price,
-            'valid_until' => date('Y-m-d', strtotime('+30 days')),
+            'valid_until' => date('Y-m-d', strtotime('+15 days')),
             'start_date' => $input['startDate'] ?? null,
             'delivery_date' => $input['deliveryDate'] ?? null,
             'selected_template_id' => !empty($input['selectedTemplate']) ? $input['selectedTemplate'] : null,
