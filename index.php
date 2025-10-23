@@ -1151,6 +1151,12 @@ header('Content-Type: text/html; charset=utf-8');
                                         </div>
                                     </div>
                                     <div class="mb-3">
+                                        <label for="cc_email" class="form-label">CC E-posta Adresi</label>
+                                        <input type="email" class="form-control" id="cc_email"
+                                               placeholder="cc@email.com (isteğe bağlı)">
+                                        <div class="form-text">Teklif mailinin kopyasının gönderileceği ek e-posta adresi (isteğe bağlı)</div>
+                                    </div>
+                                    <div class="mb-3">
                                         <label for="company" class="form-label">Şirket Adı</label>
                                         <input type="text" class="form-control" id="company"
                                                placeholder="Şirket adınız (opsiyonel)">

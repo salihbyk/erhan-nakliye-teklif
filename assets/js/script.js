@@ -396,6 +396,7 @@ function submitForm() {
         lastName: document.getElementById('lastName').value.trim(),
         phone: document.getElementById('phone').value.trim(),
         email: document.getElementById('email').value.trim(),
+        cc_email: document.getElementById('cc_email').value.trim(),
         company: document.getElementById('company').value.trim(),
         transportMode: document.getElementById('selectedMode').value,
         containerType: document.getElementById('selectedContainerType').value,

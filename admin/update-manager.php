@@ -173,11 +173,24 @@ if ($_POST['action'] === 'install_update' && isset($_FILES['update_package'])) {
             $db = $database->getConnection();
 
             foreach ($config['migrations'] as $migration) {
-                $migrationPath = $extractPath . '/migrations/' . $migration;
+                $migrationPath = $extractPath . '/setup/' . $migration;
                 if (file_exists($migrationPath)) {
-                    $migrationResult = executeMigration($migrationPath, $config['version']);
-                    if (!$migrationResult['success']) {
-                        throw new Exception('Migration hatası (' . $migration . '): ' . $migrationResult['error']);
+                    // Migration dosyasını include et ve çalıştır
+                    require_once $migrationPath;
+                    
+                    // Migration fonksiyonunu çağır
+                    $functionName = 'runMigration_' . str_replace(['.php', '-'], ['', '_'], $migration);
+                    if (function_exists($functionName)) {
+                        $migrationResult = $functionName();
+                        if (!$migrationResult['success']) {
+                            throw new Exception('Migration hatası (' . $migration . '): ' . $migrationResult['message']);
+                        }
+                    } else {
+                        // Eski stil migration (executeMigration fonksiyonu ile)
+                        $migrationResult = executeMigration($migrationPath, $config['version']);
+                        if (!$migrationResult['success']) {
+                            throw new Exception('Migration hatası (' . $migration . '): ' . $migrationResult['error']);
+                        }
                     }
                 }
             }

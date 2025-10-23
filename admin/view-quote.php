@@ -1994,6 +1994,15 @@ function formatPriceWithCurrency($price, $currency) {
                                 </span>
                             </div>
 
+                            <?php if (!empty($quote['description'])): ?>
+                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; margin-bottom: 8px; min-height: 24px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e8f0fe;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['description'] ?>:</span>
+                                <span class="editable" data-field="description" data-type="textarea" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; line-height: 1.6; white-space: pre-wrap;"
+                                      onclick="editField(this)" title="Düzenlemek için tıklayın">
+                                    <?php echo nl2br(htmlspecialchars($quote['description'])); ?>
+                                </span>
+                            </div>
+                            <?php endif; ?>
 
                         </div>
 
@@ -3896,7 +3905,11 @@ function formatPriceWithCurrency($price, $currency) {
 
             // Create input
             let input;
-            if (type === 'number') {
+            if (type === 'textarea') {
+                input = document.createElement('textarea');
+                input.value = currentValue.replace(/<br\s*\/?>/gi, '\n');
+                input.rows = 3;
+            } else if (type === 'number') {
                 input = document.createElement('input');
                 input.type = 'number';
                 input.value = cleanValue;
@@ -3978,8 +3991,18 @@ function formatPriceWithCurrency($price, $currency) {
 
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
-                    e.preventDefault();
-                    input.blur(); // blur event'ini tetikle
+                    // Textarea'da sadece Ctrl+Enter ile kaydet, normal Enter yeni satır ekler
+                    if (type === 'textarea') {
+                        if (e.ctrlKey || e.metaKey) {
+                            e.preventDefault();
+                            input.blur();
+                        }
+                        // Normal Enter'da hiçbir şey yapma, textarea'da yeni satır eklensin
+                    } else {
+                        // Normal input'larda Enter ile kaydet
+                        e.preventDefault();
+                        input.blur();
+                    }
                 } else if (e.key === 'Escape') {
                     e.preventDefault();
                     cancelEdit();

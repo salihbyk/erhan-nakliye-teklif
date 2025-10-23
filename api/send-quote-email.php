@@ -42,7 +42,7 @@ try {
 
     // Teklif bilgilerini getir
     $stmt = $db->prepare("
-        SELECT q.*, c.first_name, c.last_name, c.email, c.phone, c.company,
+        SELECT q.*, c.first_name, c.last_name, c.email, c.cc_email, c.phone, c.company,
                tm.name as transport_mode_name
         FROM quotes q
         LEFT JOIN customers c ON q.customer_id = c.id
@@ -118,6 +118,12 @@ try {
     // Müşteriye email gönder
     $customer_email_sent = sendEmailSMTP($quote['email'], $subject, $full_email_body);
 
+    // CC email varsa ona da gönder
+    $cc_email_sent = false;
+    if (!empty($quote['cc_email']) && filter_var($quote['cc_email'], FILTER_VALIDATE_EMAIL)) {
+        $cc_email_sent = sendEmailSMTP($quote['cc_email'], $subject, $full_email_body);
+    }
+
     // Firmaya da email gönder (kopya) - erhan@europatrans.com.tr'ye
     $company_email = 'erhan@europatrans.com.tr';
     $company_subject = '[KOPYA] ' . $subject;
@@ -135,10 +141,18 @@ try {
         $stmt->execute([$quote_id]);
 
         $message = 'Email başarıyla gönderildi';
-        if (!$company_email_sent) {
-            $message .= ' (Firma kopyası gönderilemedi)';
-        } else {
-            $message .= ' (Müşteri ve firma kopyası gönderildi)';
+        $recipients = ['Müşteri'];
+
+        if ($cc_email_sent) {
+            $recipients[] = 'CC';
+        }
+
+        if ($company_email_sent) {
+            $recipients[] = 'Firma';
+        }
+
+        if (count($recipients) > 1) {
+            $message .= ' (' . implode(', ', $recipients) . ' kopyaları gönderildi)';
         }
 
         echo json_encode([
@@ -147,8 +161,10 @@ try {
             'quote_url' => $quote_url,
             'debug' => [
                 'customer_email' => $quote['email'],
+                'cc_email' => $quote['cc_email'] ?? null,
                 'company_email' => $company_email,
                 'customer_sent' => $customer_email_sent,
+                'cc_sent' => $cc_email_sent,
                 'company_sent' => $company_email_sent,
                 'subject' => $subject,
                 'quote_number' => $quote['quote_number']

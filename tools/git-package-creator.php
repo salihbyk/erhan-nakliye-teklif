@@ -129,6 +129,9 @@ class GitPackageCreator {
             // README dosyası oluştur
             $this->createReadme($packageDir, $description);
 
+            // update_config.json oluştur
+            $this->createUpdateConfig($packageDir, $description);
+
             // ZIP oluştur
             $zip = new ZipArchive();
             if ($zip->open($packageZip, ZipArchive::CREATE) !== TRUE) {
@@ -277,6 +280,99 @@ class GitPackageCreator {
         $readme .= "Sorunlar için GitHub Issues bölümünü kullanabilirsiniz.\n";
 
         file_put_contents($dir . '/README.md', $readme);
+    }
+
+    /**
+     * Update config dosyası oluştur
+     */
+    private function createUpdateConfig($dir, $description) {
+        // setup/ klasöründeki migration dosyalarını bul
+        $migrations = [];
+        $setupDir = $dir . '/setup';
+        
+        if (is_dir($setupDir)) {
+            $files = scandir($setupDir);
+            foreach ($files as $file) {
+                if (preg_match('/^migration_v[\d_]+\.php$/', $file)) {
+                    $migrations[] = $file;
+                }
+            }
+        }
+        
+        // Config array oluştur
+        $config = [
+            'version' => $this->version,
+            'release_date' => date('Y-m-d H:i:s'),
+            'description' => $description ?: "Versiyon {$this->version} güncellemesi",
+            'php_version' => '7.4.0',
+            'mysql_version' => '5.7.0',
+            'migrations' => $migrations,
+            'files' => [
+                [
+                    'source' => 'index.php',
+                    'target' => 'index.php',
+                    'backup' => false
+                ],
+                [
+                    'source' => 'admin/',
+                    'target' => 'admin/',
+                    'backup' => false
+                ],
+                [
+                    'source' => 'api/',
+                    'target' => 'api/',
+                    'backup' => false
+                ],
+                [
+                    'source' => 'assets/',
+                    'target' => 'assets/',
+                    'backup' => false
+                ],
+                [
+                    'source' => 'includes/',
+                    'target' => 'includes/',
+                    'backup' => false
+                ],
+                [
+                    'source' => 'setup/',
+                    'target' => 'setup/',
+                    'backup' => false
+                ],
+                [
+                    'source' => 'tools/',
+                    'target' => 'tools/',
+                    'backup' => false
+                ],
+                [
+                    'source' => 'templates/',
+                    'target' => 'templates/',
+                    'backup' => false
+                ],
+                [
+                    'source' => 'version.txt',
+                    'target' => 'version.txt',
+                    'backup' => false
+                ]
+            ],
+            'protected_files' => [
+                'config/database.php',
+                'uploads/',
+                'backups/',
+                '.git/',
+                '.htaccess'
+            ],
+            'post_update_scripts' => [],
+            'notes' => [
+                'Güncelleme öncesi mutlaka yedek alın',
+                'Güncelleme sırasında site geçici olarak erişilemez olabilir',
+                'Veritabanı migration\'ları otomatik olarak çalıştırılacaktır'
+            ]
+        ];
+        
+        file_put_contents(
+            $dir . '/update_config.json',
+            json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+        );
     }
 
     /**

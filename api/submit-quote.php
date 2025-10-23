@@ -162,7 +162,7 @@ function findOrCreateCustomer($db, $customer_data) {
         // Mevcut müşteriyi güncelle
         $stmt = $db->prepare("
             UPDATE customers
-            SET first_name = ?, last_name = ?, phone = ?, company = ?, updated_at = NOW()
+            SET first_name = ?, last_name = ?, phone = ?, company = ?, cc_email = ?, updated_at = NOW()
             WHERE id = ?
         ");
         $stmt->execute([
@@ -170,21 +170,23 @@ function findOrCreateCustomer($db, $customer_data) {
             $customer_data['lastName'],
             $customer_data['phone'],
             $customer_data['company'] ?? null,
+            $customer_data['cc_email'] ?? null,
             $existing['id']
         ]);
         return $existing['id'];
     } else {
         // Yeni müşteri ekle
         $stmt = $db->prepare("
-            INSERT INTO customers (first_name, last_name, email, phone, company)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO customers (first_name, last_name, email, phone, company, cc_email)
+            VALUES (?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([
             $customer_data['firstName'],
             $customer_data['lastName'],
             $customer_data['email'],
             $customer_data['phone'],
-            $customer_data['company'] ?? null
+            $customer_data['company'] ?? null,
+            $customer_data['cc_email'] ?? null
         ]);
         return $db->lastInsertId();
     }

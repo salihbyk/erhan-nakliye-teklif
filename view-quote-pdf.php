@@ -911,6 +911,21 @@ function formatPriceWithCurrency($price, $currency) {
                     </div>
                     <?php endif; ?>
                 </div>
+            </div>
+
+            <!-- Description (Ek Açıklama) - Full Width -->
+            <?php if (!empty($quote['description'])): ?>
+            <div style="grid-column: 1 / -1; margin-top: 10px; padding-top: 10px; border-top: 1px solid #e8f0fe;">
+                <div style="margin-bottom: 4px;">
+                    <span style="font-weight: 600; color: #2c5aa0; font-size: 9px;"><?= $t['description'] ?>:</span>
+                </div>
+                <div style="font-size: 8px; line-height: 1.5; color: #333; white-space: pre-wrap; word-wrap: break-word;">
+                    <?php echo nl2br(htmlspecialchars($quote['description'])); ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
 
                 <!-- Custom Fields (Özel Alanlar) -->
                 <?php
