@@ -559,9 +559,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Para Birimi</label>
                             <select name="currency" class="form-select">
-                                <option value="USD" <?= ($template && $template['currency'] == 'USD') ? 'selected' : '' ?>>USD</option>
-                                <option value="EUR" <?= ($template && $template['currency'] == 'EUR') ? 'selected' : '' ?>>EUR</option>
-                                <option value="TRY" <?= ($template && $template['currency'] == 'TRY') ? 'selected' : '' ?>>TRY</option>
+                                <option value="TL" <?= ($template && ($template['currency'] == 'TL' || $template['currency'] == 'TRY')) ? 'selected' : '' ?>>Türk Lirası (TL)</option>
+                                <option value="USD" <?= ($template && $template['currency'] == 'USD') ? 'selected' : '' ?>>Amerikan Doları (USD)</option>
+                                <option value="EUR" <?= ($template && $template['currency'] == 'EUR') ? 'selected' : '' ?>>Euro (EUR)</option>
+                                <option value="GBP" <?= ($template && $template['currency'] == 'GBP') ? 'selected' : '' ?>>İngiliz Sterlini (GBP)</option>
                             </select>
                         </div>
 
