@@ -167,6 +167,8 @@ function formatPriceWithCurrency($price, $currency) {
             return '$' . $formatted_price;
         case 'EUR':
             return '€' . $formatted_price;
+        case 'GBP':
+            return '£' . $formatted_price;
         case 'TL':
         default:
             return $formatted_price . ' TL';
@@ -1423,6 +1425,8 @@ function formatPriceWithCurrency($price, $currency) {
                     return '$' + formatted;
                 case 'EUR':
                     return '€' + formatted;
+                case 'GBP':
+                    return '£' + formatted;
                 case 'TL':
                 default:
                     return formatted + ' TL';

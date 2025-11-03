@@ -199,7 +199,7 @@ function generateEmailBodyForAPI($email_content, $quote_content, $quote, $quote_
 
     // Para birimi belirleme
     $currency = $quote['currency'] ?? 'EUR';
-    $currency_symbol = $currency === 'TL' ? '₺' : ($currency === 'USD' ? '$' : '€');
+    $currency_symbol = $currency === 'TL' ? '₺' : ($currency === 'USD' ? '$' : ($currency === 'GBP' ? '£' : '€'));
     $formatted_price = number_format($quote['final_price'], 2, ',', '.') . ' ' . $currency_symbol;
 
         return '

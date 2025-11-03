@@ -30,7 +30,7 @@ try {
         throw new Exception('Maliyet ID, adı ve tutar gereklidir');
     }
 
-    if (!in_array($currency, ['TL', 'USD', 'EUR'])) {
+    if (!in_array($currency, ['TL', 'USD', 'EUR', 'GBP'])) {
         throw new Exception('Geçersiz para birimi');
     }
 

@@ -129,7 +129,7 @@ function generateEmailBodyForPreview($email_content, $quote_content, $quote, $qu
 
     // Para birimi belirleme
     $currency = $quote['currency'] ?? 'EUR';
-    $currency_symbol = $currency === 'TL' ? '₺' : ($currency === 'USD' ? '$' : '€');
+    $currency_symbol = $currency === 'TL' ? '₺' : ($currency === 'USD' ? '$' : ($currency === 'GBP' ? '£' : '€'));
     $formatted_price = number_format($quote['final_price'], 2, ',', '.') . ' ' . $currency_symbol;
 
         return '
@@ -416,7 +416,7 @@ function replaceEmailVariables($content, $quote, $quote_url) {
 
     // Para birimi belirleme
     $currency = $quote['currency'] ?? 'EUR';
-    $currency_symbol = $currency === 'TL' ? '₺' : ($currency === 'USD' ? '$' : '€');
+    $currency_symbol = $currency === 'TL' ? '₺' : ($currency === 'USD' ? '$' : ($currency === 'GBP' ? '£' : '€'));
 
     // Fiyat formatla
     $formatted_price = number_format($quote['final_price'], 2, ',', '.') . ' ' . $currency_symbol;

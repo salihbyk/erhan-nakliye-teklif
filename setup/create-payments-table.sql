@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS payments (
     quote_id INT NOT NULL,
     payment_type ENUM('kaparo', 'ara_odeme', 'kalan_bakiye', 'toplam_bakiye') DEFAULT 'kaparo',
     amount DECIMAL(10,2) NOT NULL,
-    currency ENUM('TL', 'USD', 'EUR') DEFAULT 'TL',
+    currency ENUM('TL', 'USD', 'EUR', 'GBP') DEFAULT 'TL',
     payment_date DATE NOT NULL,
     payment_method VARCHAR(100) DEFAULT NULL,
     description TEXT DEFAULT NULL,

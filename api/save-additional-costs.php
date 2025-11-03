@@ -69,7 +69,7 @@ try {
                 throw new Exception('Maliyet açıklaması gereklidir');
             }
 
-            if (!in_array($currency, ['TL', 'USD', 'EUR'])) {
+            if (!in_array($currency, ['TL', 'USD', 'EUR', 'GBP'])) {
                 $currency = 'TL'; // Default değer
             }
 

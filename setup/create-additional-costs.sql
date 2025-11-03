@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS additional_costs (
     quote_id INT NOT NULL,
     description VARCHAR(255) NOT NULL,
     amount DECIMAL(10, 2) NOT NULL,
-    currency ENUM('TL', 'USD', 'EUR') DEFAULT 'TL',
+    currency ENUM('TL', 'USD', 'EUR', 'GBP') DEFAULT 'TL',
     is_additional BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

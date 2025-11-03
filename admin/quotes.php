@@ -1088,7 +1088,7 @@ $messages = getMessages();
                                                     <input type="hidden" name="quote_id" value="<?php echo $quote['id']; ?>">
                                                     <?php
                                                     $currency = $quote['template_currency'] ?? 'EUR';
-                                                    $currency_symbol = $currency === 'TL' ? '₺' : ($currency === 'USD' ? '$' : '€');
+                                                    $currency_symbol = $currency === 'TL' ? '₺' : ($currency === 'USD' ? '$' : ($currency === 'GBP' ? '£' : '€'));
                                                     $current_price = !empty($quote['final_price']) ? $quote['final_price'] : '';
                                                     ?>
                                                     <div class="input-group input-group-sm">

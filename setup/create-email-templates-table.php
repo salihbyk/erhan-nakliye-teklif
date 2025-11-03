@@ -13,7 +13,7 @@ try {
             id INT AUTO_INCREMENT PRIMARY KEY,
             transport_mode_id INT NOT NULL,
             language ENUM('tr', 'en') DEFAULT 'tr',
-            currency ENUM('TL', 'USD', 'EUR') DEFAULT 'TL',
+            currency ENUM('TL', 'USD', 'EUR', 'GBP') DEFAULT 'TL',
             template_name VARCHAR(255) NOT NULL,
             subject VARCHAR(255) NOT NULL,
             email_content TEXT NOT NULL,

@@ -16,7 +16,7 @@ try {
             id INT AUTO_INCREMENT PRIMARY KEY,
             transport_mode_id INT NOT NULL,
             language ENUM('tr', 'en') DEFAULT 'tr',
-            currency ENUM('TL', 'USD', 'EUR') DEFAULT 'TL',
+            currency ENUM('TL', 'USD', 'EUR', 'GBP') DEFAULT 'TL',
             trade_type ENUM('import', 'export') DEFAULT 'import',
             template_name VARCHAR(255) NOT NULL,
             services_content TEXT,
@@ -59,6 +59,13 @@ try {
         // UNIQUE constraint'i kaldırıyoruz - aynı kombinasyonda birden fazla şablon olabilsin
     } catch (Exception $e) {
         // Index yoksa devam et
+    }
+
+    // GBP para birimini ekle
+    try {
+        $db->exec("ALTER TABLE quote_templates MODIFY COLUMN currency ENUM('TL', 'USD', 'EUR', 'GBP') DEFAULT 'TL'");
+    } catch (Exception $e) {
+        // Zaten eklenmişse devam et
     }
 
     // Transport referans resimleri tablosunu oluştur
@@ -1370,6 +1377,7 @@ $messages = getMessages();
                                     <option value="TL">Türk Lirası (TL)</option>
                                     <option value="USD">Amerikan Doları (USD)</option>
                                     <option value="EUR">Euro (EUR)</option>
+                                    <option value="GBP">İngiliz Sterlini (GBP)</option>
                                 </select>
                             </div>
                             <div class="col-md-4 mb-3">

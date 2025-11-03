@@ -183,6 +183,8 @@ function formatPriceWithCurrency($price, $currency) {
             return '$' . $formatted_price;
         case 'EUR':
             return '€' . $formatted_price;
+        case 'GBP':
+            return '£' . $formatted_price;
         case 'TL':
         default:
             return $formatted_price . ' TL';
