@@ -272,7 +272,7 @@ try {
                     selected_template_id INT DEFAULT NULL,
                     cost_list_id INT DEFAULT NULL,
                     language ENUM('tr', 'en') DEFAULT 'tr',
-                    currency ENUM('TL', 'USD', 'EUR') DEFAULT 'TL',
+                    currency ENUM('TL', 'USD', 'EUR', 'GBP') DEFAULT 'TL',
                     valid_until DATE NOT NULL,
                     status ENUM('pending', 'sent', 'accepted', 'rejected', 'expired') DEFAULT 'pending',
                     approval_token VARCHAR(255) DEFAULT NULL,
@@ -308,7 +308,7 @@ try {
                     quote_id INT NOT NULL,
                     description VARCHAR(500) NOT NULL,
                     amount DECIMAL(10,2) NOT NULL,
-                    currency ENUM('TL', 'USD', 'EUR') DEFAULT 'TL',
+                    currency ENUM('TL', 'USD', 'EUR', 'GBP') DEFAULT 'TL',
                     is_additional TINYINT(1) DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -320,6 +320,20 @@ try {
         }
     } catch (Exception $e) {
         error_log("Additional costs table check error: " . $e->getMessage());
+    }
+
+    // greeting_text kolonu kontrolü ve ekleme
+    try {
+        $stmt = $db->prepare("SHOW COLUMNS FROM quotes LIKE 'greeting_text'");
+        $stmt->execute();
+        $columnExists = $stmt->fetch();
+
+        if (!$columnExists) {
+            $db->exec("ALTER TABLE quotes ADD COLUMN greeting_text TEXT DEFAULT NULL AFTER intro_text");
+            error_log("greeting_text column added to quotes table");
+        }
+    } catch (Exception $e) {
+        error_log("greeting_text column check error: " . $e->getMessage());
     }
 
     // Revision varsa quote_number'ı güncelle
@@ -1800,21 +1814,14 @@ function formatPriceWithCurrency($price, $currency) {
                 <!-- Left Side - Main Content -->
                 <div style="text-align: left;">
                     <p style="font-size: 16px; font-weight: 600; color: #2c5aa0; margin-bottom: 20px; line-height: 1.6;">
-                        <?php if (!empty($quote['greeting_text'])): ?>
-                            <span class="editable" data-field="greeting_text" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
-                                  onclick="editField(this)" title="Düzenlemek için tıklayın">
+                        <span class="editable" data-field="greeting_text" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; display: inline-block;"
+                              onclick="editField(this)" title="Düzenlemek için tıklayın (Selamlama metnini özelleştirin)">
+                            <?php if (!empty($quote['greeting_text'])): ?>
                                 <?= $quote['greeting_text'] ?>
-                            </span>
-                        <?php else: ?>
-                            <span class="editable" data-field="greeting_text" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
-                                  onclick="editField(this)" title="Düzenlemek için tıklayın">
-                                <strong><?= ($is_english ? 'Dear' : 'Sayın') ?>
-                                <span class="editable" data-field="full_name" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
-                                      onclick="editField(this)" title="Düzenlemek için tıklayın">
-                                    <?= htmlspecialchars($quote['first_name'] . ' ' . $quote['last_name']) ?>
-                                </span><?= ($is_english ? ',' : ',') ?></strong>
-                            </span>
-                        <?php endif; ?>
+                            <?php else: ?>
+                                <strong><?= ($is_english ? 'Dear' : 'Sayın') ?> <?= htmlspecialchars($quote['first_name'] . ' ' . $quote['last_name']) ?><?= ($is_english ? ',' : ',') ?></strong>
+                            <?php endif; ?>
+                        </span>
                     </p>
                     <p style="font-size: 15px; color: #333; line-height: 1.7; margin: 0; font-weight: 400;">
                         <span class="editable" data-field="intro_text" data-type="textarea" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; display: block;"
