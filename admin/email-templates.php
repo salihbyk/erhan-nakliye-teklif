@@ -16,7 +16,7 @@ try {
             id INT AUTO_INCREMENT PRIMARY KEY,
             transport_mode_id INT NOT NULL,
             language ENUM('tr', 'en') DEFAULT 'tr',
-            currency ENUM('TL', 'USD', 'EUR', 'GBP') DEFAULT 'TL',
+            currency ENUM('TL', 'USD', 'EUR') DEFAULT 'TL',
             template_name VARCHAR(255) NOT NULL,
             subject VARCHAR(255) NOT NULL,
             quote_content TEXT NOT NULL,
@@ -27,13 +27,6 @@ try {
             UNIQUE KEY unique_email_template (transport_mode_id, language, currency)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
-
-    // GBP para birimini ekle
-    try {
-        $db->exec("ALTER TABLE email_templates MODIFY COLUMN currency ENUM('TL', 'USD', 'EUR', 'GBP') DEFAULT 'TL'");
-    } catch (Exception $e) {
-        // Zaten eklenmişse devam et
-    }
 
     // Form işlemleri
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -425,7 +418,6 @@ $messages = getMessages();
                                     <option value="TL">Türk Lirası (TL)</option>
                                     <option value="USD">Amerikan Doları (USD)</option>
                                     <option value="EUR">Euro (EUR)</option>
-                                    <option value="GBP">İngiliz Sterlini (GBP)</option>
                                 </select>
                             </div>
                             <div class="col-md-4 mb-3">

@@ -4308,19 +4308,8 @@ function formatPriceWithCurrency($price, $currency) {
                     const isHidden = localStorage.getItem(`quote_custom_separator_hidden_${quoteId}`) === 'true';
 
                     if (!isHidden) {
-                    // İlk custom field'dan önce ayırıcı ekle
-                    const separatorHtml = `
-                        <!-- Ayırıcı Başlık ve Çizgi -->
-                        <div data-separator="custom-fields" style="grid-column: 1 / -1; display: flex; align-items: center; margin: 15px 0 10px 0;">
-                            <span class="editable" data-field="custom_section_title" data-quote-id="${quoteId}" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; font-weight: 600; color: #2c5aa0; font-size: 14px; white-space: nowrap;" onclick="editField(this)" title="Başlığı düzenlemek için tıklayın">
-                                ${customFields.custom_section_title || 'Ek olarak:'}
-                                <span class="edit-indicator"></span>
-                            </span>
-                                <button type="button" class="btn btn-sm btn-link" onclick="removeCustomSeparator(this)" title="Başlığı kaldır" style="margin-left: 8px; color: #dc3545; text-decoration: none; padding: 2px 6px;">×</button>
-                            <div style="flex: 1; height: 1px; background: #ddd; margin-left: 15px;"></div>
-                        </div>
-                    `;
-                    container.insertAdjacentHTML('beforeend', separatorHtml);
+                    // Ayırıcı başlık ve çizgi gizlendi
+                    // Separator görünmeyecek
                     }
                 }
 
@@ -4609,18 +4598,8 @@ function formatPriceWithCurrency($price, $currency) {
                 const isHidden = localStorage.getItem(`quote_custom_separator_hidden_${quoteId}`) === 'true';
 
                 if (!isHidden) {
-                const separatorHtml = `
-                    <!-- Ayırıcı Başlık ve Çizgi -->
-                    <div data-separator="custom-fields" style="grid-column: 1 / -1; display: flex; align-items: center; margin: 15px 0 10px 0;">
-                        <span class="editable" data-field="custom_section_title" data-quote-id="<?php echo $quote['quote_number']; ?>" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; font-weight: 600; color: #2c5aa0; font-size: 14px; white-space: nowrap;" onclick="editField(this)" title="Başlığı düzenlemek için tıklayın">
-                                <?php echo !empty($custom_fields['custom_section_title']) ? htmlspecialchars($custom_fields['custom_section_title']) : 'Ek olarak:'; ?>
-                            <span class="edit-indicator"></span>
-                        </span>
-                            <button type="button" class="btn btn-sm btn-link" onclick="removeCustomSeparator(this)" title="Başlığı kaldır" style="margin-left: 8px; color: #dc3545; text-decoration: none; padding: 2px 6px;">×</button>
-                        <div style="flex: 1; height: 1px; background: #ddd; margin-left: 15px;"></div>
-                    </div>
-                `;
-                container.insertAdjacentHTML('beforeend', separatorHtml);
+                // Ayırıcı başlık ve çizgi gizlendi
+                // Separator görünmeyecek
                 }
             }
 

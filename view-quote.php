@@ -1916,14 +1916,8 @@ function formatPriceWithCurrency($price, $currency) {
 
                                                         // Ana grid container'ın içinde devam et
                             if (!empty($organizedFields)) {
-                                // Section title'ı al
-                                $sectionTitle = isset($custom_fields['custom_section_title']) ? htmlspecialchars($custom_fields['custom_section_title']) : 'Ek olarak:';
-
-                                // İlk custom field'dan önce ayırıcı ekle
-                                echo '<div style="grid-column: 1 / -1; display: flex; align-items: center; margin: 15px 0 10px 0;">';
-                                echo '<span style="font-weight: 600; color: #2c5aa0; font-size: 14px; white-space: nowrap;">' . $sectionTitle . '</span>';
-                                echo '<div style="flex: 1; height: 1px; background: #ddd; margin-left: 15px;"></div>';
-                                echo '</div>';
+                                // Section title ve ayırıcı gizlendi
+                                // Ek olarak başlığı ve çizgi görünmeyecek
 
                                 foreach ($organizedFields as $pair) {
                                     // Sol kolon
