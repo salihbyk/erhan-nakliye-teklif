@@ -98,6 +98,7 @@ try {
             'pieces' => $input['pieces'] ?? null,
             'cargo_type' => $input['cargo_type'] ?? 'genel',
             'trade_type' => $input['tradeType'],
+            'partial_transport' => !empty($input['partialTransport']) && $input['partialTransport'] == '1' ? 1 : 0,
             'description' => $input['description'] ?? null,
             'calculated_price' => $default_price,
             'final_price' => $default_price,
@@ -308,9 +309,9 @@ function saveQuote($db, $quote_data) {
     $stmt = $db->prepare("
         INSERT INTO quotes (
             quote_number, customer_id, transport_mode_id, container_type, origin, destination,
-            weight, volume, unit_price, pieces, cargo_type, trade_type, description, calculated_price,
+            weight, volume, unit_price, pieces, cargo_type, trade_type, partial_transport, description, calculated_price,
             final_price, valid_until, start_date, delivery_date, selected_template_id, cost_list_id, show_reference_images
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
     ");
 
     $stmt->execute([
@@ -326,6 +327,7 @@ function saveQuote($db, $quote_data) {
         $quote_data['pieces'],
         $quote_data['cargo_type'],
         $quote_data['trade_type'],
+        $quote_data['partial_transport'] ?? 0,
         $quote_data['description'],
         $quote_data['calculated_price'],
         $quote_data['final_price'],

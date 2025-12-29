@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
 
             // Güvenlik kontrolü - sadece belirli alanları güncellemeye izin ver
             $customer_fields = ['first_name', 'last_name', 'email', 'phone', 'company'];
-            $quote_fields = ['origin', 'destination', 'weight', 'volume', 'pieces', 'cargo_type', 'trade_type', 'description', 'final_price', 'notes', 'services_content', 'optional_services_content', 'terms_content', 'unit_price', 'transport_process_text', 'start_date', 'delivery_date', 'additional_section1_title', 'additional_section1_content', 'additional_section2_title', 'additional_section2_content', 'transport_mode_id', 'custom_transport_name', 'intro_text', 'greeting_text', 'container_type', 'show_reference_images'];
+            $quote_fields = ['origin', 'destination', 'weight', 'volume', 'pieces', 'cargo_type', 'trade_type', 'partial_transport', 'description', 'final_price', 'notes', 'services_content', 'optional_services_content', 'terms_content', 'unit_price', 'unit_price_currency', 'transport_process_text', 'start_date', 'delivery_date', 'additional_section1_title', 'additional_section1_content', 'additional_section2_title', 'additional_section2_content', 'transport_mode_id', 'custom_transport_name', 'intro_text', 'greeting_text', 'container_type', 'show_reference_images'];
 
             // Özel alanlar - bunlar için özel handling gerekiyor
             $special_fields = ['quote_price_label', 'quote_date', 'validity', 'transport_type',
@@ -1948,7 +1948,29 @@ function formatPriceWithCurrency($price, $currency) {
                                 <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['transport_type'] ?>:</span>
                                 <span class="editable" data-field="transport_type" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
                                       onclick="editField(this)" title="Düzenlemek için tıklayın">
-                                    <?php echo htmlspecialchars(!empty($quote['custom_transport_name']) ? $quote['custom_transport_name'] : translateTransportMode($quote['transport_name'], $t)); ?>
+                                    <?php 
+                                        $transport_display = htmlspecialchars(!empty($quote['custom_transport_name']) ? $quote['custom_transport_name'] : translateTransportMode($quote['transport_name'], $t));
+                                        if (!empty($quote['partial_transport']) && $quote['partial_transport'] == 1) {
+                                            $transport_display .= ' / ' . ($is_english ? 'Partial Transport' : 'Parsiyel Taşıma');
+                                        }
+                                        echo $transport_display;
+                                    ?>
+                                </span>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['origin'] ?>:</span>
+                                <span class="editable" data-field="origin" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
+                                      onclick="editField(this)" title="Düzenlemek için tıklayın">
+                                    <?php echo htmlspecialchars($quote['origin']); ?>
+                                </span>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['destination'] ?>:</span>
+                                <span class="editable" data-field="destination" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
+                                      onclick="editField(this)" title="Düzenlemek için tıklayın">
+                                    <?php echo htmlspecialchars($quote['destination']); ?>
                                 </span>
                             </div>
 
@@ -1983,22 +2005,6 @@ function formatPriceWithCurrency($price, $currency) {
 
                         <!-- Right Column -->
                         <div>
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['origin'] ?>:</span>
-                                <span class="editable" data-field="origin" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
-                                      onclick="editField(this)" title="Düzenlemek için tıklayın">
-                                    <?php echo htmlspecialchars($quote['origin']); ?>
-                                </span>
-                            </div>
-
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['destination'] ?>:</span>
-                                <span class="editable" data-field="destination" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
-                                      onclick="editField(this)" title="Düzenlemek için tıklayın">
-                                    <?php echo htmlspecialchars($quote['destination']); ?>
-                                </span>
-                            </div>
-
                             <?php if (!empty($quote['start_date']) && $quote['start_date'] !== '0000-00-00' && $quote['start_date'] !== null): ?>
                             <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
                                 <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['start_date'] ?>:</span>
@@ -2021,9 +2027,26 @@ function formatPriceWithCurrency($price, $currency) {
 
                             <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
                                 <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['volume'] ?>:</span>
-                                <span class="editable" data-field="volume" data-type="number" data-step="0.01" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
+                                <span class="editable" data-field="volume" data-type="number" data-step="0.01" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right;"
                                       onclick="editField(this)" title="Düzenlemek için tıklayın">
                                     <?php echo !empty($quote['volume']) ? number_format($quote['volume'], 2, ',', '.') . ' m³' : ($is_english ? 'Click to add volume' : 'Hacim eklemek için tıklayın'); ?>
+                                </span>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['unit_price'] ?>:</span>
+                                <span style="cursor: default; padding: 2px 6px; border-radius: 3px; display: flex; gap: 8px; align-items: center;">
+                                    <span class="editable" data-field="unit_price" data-type="number" data-step="0.01" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right; flex: 1;"
+                                          onclick="editField(this)" title="Düzenlemek için tıklayın">
+                                        <?php echo !empty($quote['unit_price']) ? number_format($quote['unit_price'], 2, ',', '.') : ($is_english ? 'Click to add' : 'Eklemek için tıkla'); ?>
+                                    </span>
+                                    <select class="form-select form-select-sm" style="width: 65px; font-size: 11px; padding: 4px 6px; border: 1px solid #dee2e6; border-radius: 4px; background-color: #fff; appearance: none; -webkit-appearance: none; -moz-appearance: none; cursor: pointer; background-image: none;" 
+                                            onchange="updateUnitPriceCurrency(this.value)">
+                                        <option value="EUR" <?= (!isset($quote['unit_price_currency']) || $quote['unit_price_currency'] == 'EUR') ? 'selected' : '' ?>>EUR</option>
+                                        <option value="USD" <?= (isset($quote['unit_price_currency']) && $quote['unit_price_currency'] == 'USD') ? 'selected' : '' ?>>USD</option>
+                                        <option value="TL" <?= (isset($quote['unit_price_currency']) && $quote['unit_price_currency'] == 'TL') ? 'selected' : '' ?>>TL</option>
+                                        <option value="GBP" <?= (isset($quote['unit_price_currency']) && $quote['unit_price_currency'] == 'GBP') ? 'selected' : '' ?>>GBP</option>
+                                    </select>
                                 </span>
                             </div>
 
@@ -3193,6 +3216,37 @@ function formatPriceWithCurrency($price, $currency) {
                 console.error('Error:', error);
                 showSaveIndicator('❌ Bağlantı hatası', 'error');
                 saveToLocalStorage(); // Bağlantı hatası durumunda yerel depolamaya kaydet
+            });
+        }
+
+        // Update unit price currency
+        function updateUnitPriceCurrency(currency) {
+            const quoteId = <?= json_encode($quote['id']) ?>;
+            
+            showSaveIndicator('Kaydediliyor...');
+            
+            fetch('../api/update-general-info.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    quote_id: quoteId,
+                    field: 'unit_price_currency',
+                    value: currency
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSaveIndicator('✓ Para birimi güncellendi', 'success');
+                } else {
+                    showSaveIndicator('❌ Hata: ' + (data.error || 'Bilinmeyen hata'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showSaveIndicator('❌ Bağlantı hatası', 'error');
             });
         }
 

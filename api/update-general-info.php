@@ -33,24 +33,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $quote_number = $quote['quote_number'];
 
-            // Tarih alanları için özel handling
-            if ($field === 'quote_date') {
-                $stmt = $db->prepare("UPDATE quotes SET created_at = ?, updated_at = NOW() WHERE quote_number = ?");
-                $stmt->execute([$value, $quote_number]);
-            } elseif ($field === 'validity') {
-                $stmt = $db->prepare("UPDATE quotes SET valid_until = ?, updated_at = NOW() WHERE quote_number = ?");
-                $stmt->execute([$value, $quote_number]);
-            } elseif ($field === 'start_date') {
-                $stmt = $db->prepare("UPDATE quotes SET start_date = ?, updated_at = NOW() WHERE quote_number = ?");
-                $stmt->execute([$value, $quote_number]);
-            } elseif ($field === 'delivery_date') {
-                $stmt = $db->prepare("UPDATE quotes SET delivery_date = ?, updated_at = NOW() WHERE quote_number = ?");
-                $stmt->execute([$value, $quote_number]);
-            } else {
-                // Diğer alanlar için genel handling eklenebilir
-                echo json_encode(['success' => false, 'error' => 'Bu alan şu anda düzenlenemiyor: ' . $field]);
+            // İzin verilen alanlar listesi
+            $allowed_fields = [
+                'quote_date' => 'created_at',
+                'validity' => 'valid_until',
+                'start_date' => 'start_date',
+                'delivery_date' => 'delivery_date',
+                'origin' => 'origin',
+                'destination' => 'destination',
+                'weight' => 'weight',
+                'volume' => 'volume',
+                'unit_price' => 'unit_price',
+                'unit_price_currency' => 'unit_price_currency',
+                'pieces' => 'pieces',
+                'cargo_type' => 'cargo_type',
+                'trade_type' => 'trade_type',
+                'partial_transport' => 'partial_transport',
+                'description' => 'description',
+                'final_price' => 'final_price',
+                'notes' => 'notes',
+                'container_type' => 'container_type',
+                'custom_transport_name' => 'custom_transport_name',
+                'intro_text' => 'intro_text',
+                'greeting_text' => 'greeting_text',
+                'transport_process_text' => 'transport_process_text'
+            ];
+
+            // Alan kontrolü
+            if (!isset($allowed_fields[$field])) {
+                echo json_encode(['success' => false, 'error' => 'Bu alan düzenlenemiyor: ' . $field]);
                 exit;
             }
+
+            $db_field = $allowed_fields[$field];
+
+            // Özel değer dönüşümleri
+            if ($field === 'partial_transport') {
+                $value = ($value === 'true' || $value === '1' || $value === 1) ? 1 : 0;
+            }
+
+            // Genel güncelleme
+            $stmt = $db->prepare("UPDATE quotes SET {$db_field} = ?, updated_at = NOW() WHERE quote_number = ?");
+            $stmt->execute([$value, $quote_number]);
 
             echo json_encode(['success' => true, 'message' => 'Güncellendi']);
             exit;

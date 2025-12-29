@@ -511,6 +511,24 @@ try {
     $stmt->execute($params);
     $total_records = $stmt->fetch()['total'];
 
+    // Widget İstatistikleri için veriler
+    $stats_sql = "
+        SELECT 
+            COUNT(*) as total_count,
+            SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count,
+            SUM(CASE WHEN status = 'priced' THEN 1 ELSE 0 END) as priced_count,
+            SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sent_count,
+            SUM(CASE WHEN status = 'accepted' THEN 1 ELSE 0 END) as approved_count,
+            SUM(CASE WHEN final_price IS NOT NULL AND final_price > 0 THEN final_price ELSE 0 END) as total_value,
+            SUM(CASE WHEN status = 'sent' AND final_price IS NOT NULL THEN final_price ELSE 0 END) as sent_value,
+            SUM(CASE WHEN DATE(created_at) = CURDATE() THEN 1 ELSE 0 END) as today_count,
+            SUM(CASE WHEN WEEK(created_at) = WEEK(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) THEN 1 ELSE 0 END) as week_count
+        FROM quotes
+        WHERE is_active = 1
+    ";
+    $stats_stmt = $db->query($stats_sql);
+    $stats = $stats_stmt->fetch(PDO::FETCH_ASSOC);
+
     // Teklifler
     $sql = "
         SELECT q.*, c.first_name, c.last_name, c.email, c.phone, c.company,
@@ -540,6 +558,17 @@ try {
     $quotes = [];
     $transport_modes = [];
     $pagination = ['total_pages' => 1, 'current_page' => 1];
+    $stats = [
+        'total_count' => 0,
+        'pending_count' => 0,
+        'priced_count' => 0,
+        'sent_count' => 0,
+        'approved_count' => 0,
+        'total_value' => 0,
+        'sent_value' => 0,
+        'today_count' => 0,
+        'week_count' => 0
+    ];
 }
 
 $messages = getMessages();
@@ -621,6 +650,21 @@ $messages = getMessages();
         .quote-number:hover {
             color: #0056b3;
             text-decoration: underline;
+        }
+
+        .quote-number.accepted {
+            color: #28a745;
+            font-weight: 700;
+        }
+
+        .quote-number.accepted:hover {
+            color: #218838;
+        }
+
+        .quote-number.accepted::before {
+            content: '✓ ';
+            margin-right: 4px;
+            font-weight: 700;
         }
 
         .customer-info {
@@ -888,6 +932,326 @@ $messages = getMessages();
             background-color: #cce7ff;
             color: #084298;
         }
+
+        /* Widget Cards */
+        .stats-widgets {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .widget-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border-left: 4px solid;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .widget-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            cursor: pointer;
+        }
+
+        .widget-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            opacity: 0.05;
+            font-size: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .widget-card.pending {
+            border-left-color: #ffc107;
+        }
+
+        .widget-card.pending::before {
+            content: '⏳';
+        }
+
+                <!-- İstatistik Widgetları -->
+                <div class="stats-widgets">
+                    <!-- Bekleyen Teklifler -->
+                    <div class="widget-card pending" onclick="window.location.href='?status=pending'" style="cursor: pointer;">
+                        <div class="widget-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="widget-title">Bekleyen Teklifler</div>
+                        <div class="widget-value"><?php echo number_format($stats['pending_count'] ?? 0); ?></div>
+                        <div class="widget-subtitle">
+                            <i class="fas fa-hourglass-half"></i>
+                            Fiyatlandırma bekleniyor
+                        </div>
+                        <?php if (($stats['pending_count'] ?? 0) > 0): ?>
+                        <div class="widget-footer">
+                            <a href="?status=pending" class="text-decoration-none">
+                                <span class="badge bg-warning">Görüntüle</span>
+                            </a>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Fiyatlandırılmış Teklifler -->
+                    <div class="widget-card priced">
+                        <div class="widget-icon">
+                            <i class="fas fa-euro-sign"></i>
+                        </div>
+                        <div class="widget-title">Fiyatlandırıldı</div>
+                        <div class="widget-value"><?php echo number_format($stats['priced_count'] ?? 0); ?></div>
+                        <div class="widget-subtitle">
+                            <i class="fas fa-tags"></i>
+                            Gönderilmeyi bekliyor
+                        </div>
+                        <?php if (($stats['priced_count'] ?? 0) > 0): ?>
+                        <div class="widget-footer">
+                            <a href="?status=priced" class="text-decoration-none">
+                                <span class="badge bg-info">Görüntüle</span>
+                            </a>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Gönderilen Teklifler -->
+                    <div class="widget-card sent" onclick="window.location.href='?status=sent'" style="cursor: pointer;">
+                        <div class="widget-icon">
+                            <i class="fas fa-paper-plane"></i>
+                        </div>
+                        <div class="widget-title">Gönderilen Teklifler</div>
+                        <div class="widget-value"><?php echo number_format($stats['sent_count'] ?? 0); ?></div>
+                        <div class="widget-subtitle">
+                            <i class="fas fa-envelope-open"></i>
+                            Müşteriye iletildi
+                        </div>
+                        <div class="widget-footer">
+                            <?php 
+                            $sent_value = $stats['sent_value'] ?? 0;
+                            if ($sent_value > 0): 
+                            ?>
+                            <span class="badge bg-success">Toplam: €<?php echo number_format($sent_value, 2); ?></span>
+                            <?php endif; ?>
+                            <?php if (($stats['sent_count'] ?? 0) > 0): ?>
+                            <a href="?status=sent" class="text-decoration-none ms-2">
+                                <span class="badge bg-success">Görüntüle</span>
+                            </a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- Onaylanan Teklifler -->
+                    <div class="widget-card approved" onclick="window.location.href='?status=accepted'" style="cursor: pointer;">
+                        <div class="widget-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="widget-title">Onaylanan Teklifler</div>
+                        <div class="widget-value"><?php echo number_format($stats['approved_count'] ?? 0); ?></div>
+                        <div class="widget-subtitle">
+                            <i class="fas fa-thumbs-up"></i>
+                            Başarıyla tamamlandı
+                        </div>
+                        <?php if (($stats['approved_count'] ?? 0) > 0): ?>
+                        <div class="widget-footer">
+                            <a href="?status=accepted" class="text-decoration-none">
+                                <span class="badge bg-primary">Görüntüle</span>
+                            </a>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Bugünkü Teklifler -->
+                    <div class="widget-card today">
+                        <div class="widget-icon">
+                            <i class="fas fa-calendar-day"></i>
+                        </div>
+                        <div class="widget-title">Bugün</div>
+                        <div class="widget-value"><?php echo number_format($stats['today_count'] ?? 0); ?></div>
+                        <div class="widget-subtitle">
+                            <i class="fas fa-clock"></i>
+                            Bugün oluşturulan
+                        </div>
+                        <div class="widget-footer">
+                            <span class="badge bg-warning">Bu hafta: <?php echo number_format($stats['week_count'] ?? 0); ?></span>
+                        </div>
+                    </div>
+
+                    <!-- Toplam Değer -->
+                    <div class="widget-card total">
+                        <div class="widget-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="widget-title">Toplam Teklif Değeri</div>
+                        <div class="widget-value">€<?php echo number_format($stats['total_value'] ?? 0, 0); ?></div>
+                        <div class="widget-subtitle">
+                            <i class="fas fa-coins"></i>
+                            Tüm teklifler
+                        </div>
+                        <div class="widget-footer">
+                            <span class="badge bg-secondary">
+                                Toplam: <?php echo number_format($stats['total_count'] ?? 0); ?> teklif
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+        .widget-card.priced {
+            border-left-color: #17a2b8;
+        }
+
+        .widget-card.priced::before {
+            content: '💰';
+        }
+
+        .widget-card.sent {
+            border-left-color: #28a745;
+        }
+
+        .widget-card.sent::before {
+            content: '📧';
+        }
+
+        .widget-card.approved {
+            border-left-color: #007bff;
+        }
+
+        .widget-card.approved::before {
+            content: '✅';
+        }
+
+        .widget-card.total {
+            border-left-color: #6c757d;
+        }
+
+        .widget-card.total::before {
+            content: '📊';
+        }
+
+        .widget-card.today {
+            border-left-color: #fd7e14;
+        }
+
+        .widget-card.today::before {
+            content: '📅';
+        }
+
+        .widget-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .widget-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+
+        .widget-card.pending .widget-icon {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            color: #856404;
+        }
+
+        .widget-card.priced .widget-icon {
+            background: linear-gradient(135deg, #d1ecf1 0%, #a8dadc 100%);
+            color: #0c5460;
+        }
+
+        .widget-card.sent .widget-icon {
+            background: linear-gradient(135deg, #d4edda 0%, #95d5b2 100%);
+            color: #155724;
+        }
+
+        .widget-card.approved .widget-icon {
+            background: linear-gradient(135deg, #cce5ff 0%, #90c2ff 100%);
+            color: #004085;
+        }
+
+        .widget-card.total .widget-icon {
+            background: linear-gradient(135deg, #e2e3e5 0%, #c8cfd8 100%);
+            color: #383d41;
+        }
+
+        .widget-card.today .widget-icon {
+            background: linear-gradient(135deg, #ffe5cc 0%, #ffcb99 100%);
+            color: #bd5d00;
+        }
+
+        .widget-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .widget-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #212529;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .widget-subtitle {
+            font-size: 11px;
+            color: #6c757d;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .widget-subtitle i {
+            font-size: 10px;
+        }
+
+        .widget-footer {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #f1f3f4;
+            font-size: 10px;
+            color: #6c757d;
+        }
+
+        .widget-footer .badge {
+            font-size: 9px;
+            padding: 2px 6px;
+        }
+
+        .widget-trend {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .widget-trend.up {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .widget-trend.down {
+            background: #f8d7da;
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
@@ -934,6 +1298,90 @@ $messages = getMessages();
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
+
+                <!-- İstatistik Widgetları -->
+                <div class="stats-widgets">
+                    <!-- Onaylanan Teklifler -->
+                    <div class="widget-card approved" onclick="window.location.href='?status=accepted'" style="cursor: pointer;">
+                        <div class="widget-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="widget-title">Onaylanan Teklifler</div>
+                        <div class="widget-value"><?php echo number_format($stats['approved_count'] ?? 0); ?></div>
+                        <div class="widget-subtitle">
+                            <i class="fas fa-thumbs-up"></i>
+                            Başarıyla tamamlandı
+                        </div>
+                    </div>
+
+                    <!-- Bekleyen Teklifler -->
+                    <div class="widget-card pending" onclick="window.location.href='?status=pending'" style="cursor: pointer;">
+                        <div class="widget-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="widget-title">Bekleyen Teklifler</div>
+                        <div class="widget-value"><?php echo number_format($stats['pending_count'] ?? 0); ?></div>
+                        <div class="widget-subtitle">
+                            <i class="fas fa-hourglass-half"></i>
+                            Fiyatlandırma bekleniyor
+                        </div>
+                    </div>
+
+                    <!-- Gönderilen Teklifler -->
+                    <div class="widget-card sent" onclick="window.location.href='?status=sent'" style="cursor: pointer;">
+                        <div class="widget-icon">
+                            <i class="fas fa-paper-plane"></i>
+                        </div>
+                        <div class="widget-title">Gönderilen Teklifler</div>
+                        <div class="widget-value"><?php echo number_format($stats['sent_count'] ?? 0); ?></div>
+                        <div class="widget-subtitle">
+                            <i class="fas fa-envelope-open"></i>
+                            Müşteriye iletildi
+                        </div>
+                        <?php 
+                        $sent_value = $stats['sent_value'] ?? 0;
+                        if ($sent_value > 0): 
+                        ?>
+                        <div class="widget-footer">
+                            <span class="badge bg-success">Toplam: €<?php echo number_format($sent_value, 2); ?></span>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Bugünkü Teklifler -->
+                    <div class="widget-card today">
+                        <div class="widget-icon">
+                            <i class="fas fa-calendar-day"></i>
+                        </div>
+                        <div class="widget-title">Bugün</div>
+                        <div class="widget-value"><?php echo number_format($stats['today_count'] ?? 0); ?></div>
+                        <div class="widget-subtitle">
+                            <i class="fas fa-clock"></i>
+                            Bugün oluşturulan
+                        </div>
+                        <div class="widget-footer">
+                            <span class="badge bg-warning">Bu hafta: <?php echo number_format($stats['week_count'] ?? 0); ?></span>
+                        </div>
+                    </div>
+
+                    <!-- Toplam Değer -->
+                    <div class="widget-card total">
+                        <div class="widget-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="widget-title">Toplam Teklif Değeri</div>
+                        <div class="widget-value">€<?php echo number_format($stats['total_value'] ?? 0, 0); ?></div>
+                        <div class="widget-subtitle">
+                            <i class="fas fa-coins"></i>
+                            Tüm teklifler
+                        </div>
+                        <div class="widget-footer">
+                            <span class="badge bg-secondary">
+                                Toplam: <?php echo number_format($stats['total_count'] ?? 0); ?> teklif
+                            </span>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Filters -->
                 <div class="filter-section">
@@ -999,7 +1447,7 @@ $messages = getMessages();
                                             <!-- Teklif No -->
                                             <td>
                                                 <a href="../view-quote.php?id=<?php echo urlencode($quote['quote_number']); ?>"
-                                                   target="_blank" class="quote-number">
+                                                   target="_blank" class="quote-number <?php echo $quote['status'] === 'accepted' ? 'accepted' : ''; ?>">
                                                     #<?php echo htmlspecialchars($quote['quote_number']); ?>
                                                 </a>
                                                 <div class="date-info">
@@ -1667,3 +2115,4 @@ $messages = getMessages();
     <script src="includes/sidebar.js"></script>
 </body>
 </html>
+

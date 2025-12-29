@@ -7,12 +7,54 @@
  */
 
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET');
+header('Access-Control-Allow-Origin: http://localhost:5173');
+header('Access-Control-Allow-Methods: GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, X-API-KEY');
+header('Access-Control-Allow-Credentials: true');
 
-// Güvenlik Kontrolü
-// Not: Gerçek bir senaryoda bu anahtar config/database.php veya bir settings tablosunda tutulmalıdır.
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    exit(0);
+}
+
+// React uygulaması için özel action desteği
+$action = $_GET['action'] ?? '';
+
+if ($action === 'transport_modes' || $action === 'customers') {
+    // React için direkt veri döndür (API key kontrolü yok)
+    require_once '../config/database.php';
+    
+    try {
+        $database = new Database();
+        $db = $database->getConnection();
+        
+        if ($action === 'transport_modes') {
+            $stmt = $db->query("
+                SELECT id, name, slug, icon, is_active
+                FROM transport_modes
+                WHERE is_active = 1
+                ORDER BY name ASC
+            ");
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode($data);
+        } elseif ($action === 'customers') {
+            $stmt = $db->query("
+                SELECT id, first_name, last_name, email, phone, company
+                FROM customers
+                ORDER BY created_at DESC
+                LIMIT 100
+            ");
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode($data);
+        }
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]);
+        exit;
+    }
+}
+
+// Normal API key kontrolü
 $api_key = "europatrans_secret_key_123"; 
 
 // getallheaders() her ortamda olmayabilir (örn: PHP-FPM/Nginx bazen farklı davranabilir)

@@ -687,6 +687,94 @@ header('Content-Type: text/html; charset=utf-8');
             color: #7b1fa2;
         }
 
+        /* iOS Style Toggle Switch for Partial Transport */
+        .toggle-switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .transport-option.selected .toggle-switch-container {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .toggle-switch-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #666;
+            user-select: none;
+        }
+
+        .transport-option.selected .toggle-switch-label {
+            color: var(--primary-color);
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        .toggle-switch input:focus + .toggle-slider {
+            box-shadow: 0 0 1px #667eea;
+        }
+
+        /* Hover effect */
+        .toggle-switch:hover .toggle-slider {
+            background-color: #bbb;
+        }
+
+        .toggle-switch input:checked:hover + .toggle-slider {
+            background: linear-gradient(135deg, #5a6dcd 0%, #6a428f 100%);
+        }
+
         /* Action Buttons */
         .action-buttons {
             display: flex;
@@ -1186,6 +1274,13 @@ header('Content-Type: text/html; charset=utf-8');
                                                         <i class="fas fa-arrow-up"></i> İhracat
                                                     </button>
                                                 </div>
+                                                <div class="toggle-switch-container">
+                                                    <span class="toggle-switch-label">Parsiyel Taşıma</span>
+                                                    <label class="toggle-switch">
+                                                        <input type="checkbox" class="partial-transport-checkbox" data-mode="karayolu">
+                                                        <span class="toggle-slider"></span>
+                                                    </label>
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="transport-option" data-mode="havayolu">
@@ -1202,6 +1297,13 @@ header('Content-Type: text/html; charset=utf-8');
                                                     <button type="button" class="btn btn-outline-primary btn-sm trade-btn" data-mode="havayolu" data-trade="ihracat">
                                                         <i class="fas fa-arrow-up"></i> İhracat
                                                     </button>
+                                                </div>
+                                                <div class="toggle-switch-container">
+                                                    <span class="toggle-switch-label">Parsiyel Taşıma</span>
+                                                    <label class="toggle-switch">
+                                                        <input type="checkbox" class="partial-transport-checkbox" data-mode="havayolu">
+                                                        <span class="toggle-slider"></span>
+                                                    </label>
                                                 </div>
                                             </div>
                                         </div>
@@ -1220,11 +1322,19 @@ header('Content-Type: text/html; charset=utf-8');
                                                         <i class="fas fa-arrow-up"></i> İhracat
                                                     </button>
                                                 </div>
+                                                <div class="toggle-switch-container">
+                                                    <span class="toggle-switch-label">Parsiyel Taşıma</span>
+                                                    <label class="toggle-switch">
+                                                        <input type="checkbox" class="partial-transport-checkbox" data-mode="denizyolu">
+                                                        <span class="toggle-slider"></span>
+                                                    </label>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                     <input type="hidden" id="selectedMode" name="transportMode">
                                     <input type="hidden" id="tradeType" name="tradeType">
+                                    <input type="hidden" id="partialTransport" name="partialTransport" value="0">
 
                                     <!-- Container Type Selection (for Sea Transport) -->
                                     <div id="containerTypeSection" style="display: none;" class="slide-up">

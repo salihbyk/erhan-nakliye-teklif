@@ -1681,7 +1681,6 @@ function formatPriceWithCurrency($price, $currency) {
 
 
                 <!-- Approval Section -->
-                <?php if (!$is_expired): ?>
                 <div style="text-align: right; padding-top: 15px; border-top: 1px solid #e0e0e0;">
 
                     <?php if ($is_approved): ?>
@@ -1702,10 +1701,21 @@ function formatPriceWithCurrency($price, $currency) {
                         </div>
 
                     <?php else: ?>
+                        <?php if ($is_expired): ?>
+                            <!-- Süresi Dolmuş Uyarısı -->
+                            <div style="margin-bottom: 15px; padding: 10px 15px; background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border: 1px solid #ffc107; border-radius: 5px; color: #856404;">
+                                <i class="fas fa-exclamation-triangle" style="color: #ffc107; margin-right: 8px;"></i>
+                                <strong><?= $is_english ? 'Quote Expired' : 'Teklif Süresi Doldu' ?></strong>
+                                <div style="font-size: 12px; margin-top: 5px; opacity: 0.8;">
+                                    <?= $is_english ? 'The validity period of this quote has expired. Please contact us for renewal.' : 'Bu teklifin geçerlilik süresi dolmuştur. Yenileme için lütfen bizimle iletişime geçin.' ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
                         <!-- Approval Checkbox -->
                         <div style="margin-bottom: 15px;">
-                            <label style="display: inline-flex; align-items: center; cursor: default; font-size: 14px;">
-                                <input type="checkbox" id="approvalCheckbox" onchange="toggleApprovalButton()" style="margin-right: 10px; transform: scale(1.2);">
+                            <label style="display: inline-flex; align-items: center; cursor: pointer; font-size: 14px;">
+                                <input type="checkbox" id="approvalCheckbox" onchange="toggleApprovalButton()" style="margin-right: 10px; transform: scale(1.2); cursor: pointer;">
                                 <span><?= $is_english ? 'I have read and approve the quote' : 'Teklifi okudum onaylıyorum' ?></span>
                             </label>
                         </div>
@@ -1725,7 +1735,6 @@ function formatPriceWithCurrency($price, $currency) {
                     <?php endif; ?>
 
                 </div>
-                <?php endif; ?>
 
                                                                                                                                 <!-- General Information - Compact 2 Column Layout -->
                 <div class="form-section" style="margin: 0px 0;">
@@ -1774,7 +1783,29 @@ function formatPriceWithCurrency($price, $currency) {
                                 <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['transport_type'] ?>:</span>
                                 <span   style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
                                        >
-                                    <?php echo htmlspecialchars(!empty($quote['custom_transport_name']) ? $quote['custom_transport_name'] : translateTransportMode($quote['transport_name'], $t)); ?>
+                                    <?php 
+                                        $transport_display = htmlspecialchars(!empty($quote['custom_transport_name']) ? $quote['custom_transport_name'] : translateTransportMode($quote['transport_name'], $t));
+                                        if (!empty($quote['partial_transport']) && $quote['partial_transport'] == 1) {
+                                            $transport_display .= ' / ' . ($is_english ? 'Partial Transport' : 'Parsiyel Taşıma');
+                                        }
+                                        echo $transport_display;
+                                    ?>
+                                </span>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['origin'] ?>:</span>
+                                <span   style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
+                                       >
+                                    <?php echo htmlspecialchars($quote['origin']); ?>
+                                </span>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['destination'] ?>:</span>
+                                <span   style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
+                                       >
+                                    <?php echo htmlspecialchars($quote['destination']); ?>
                                 </span>
                             </div>
 
@@ -1810,22 +1841,6 @@ function formatPriceWithCurrency($price, $currency) {
 
                         <!-- Right Column -->
                         <div>
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['origin'] ?>:</span>
-                                <span   style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
-                                       >
-                                    <?php echo htmlspecialchars($quote['origin']); ?>
-                                </span>
-                            </div>
-
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['destination'] ?>:</span>
-                                <span   style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
-                                       >
-                                    <?php echo htmlspecialchars($quote['destination']); ?>
-                                </span>
-                            </div>
-
                             <?php if (!empty($quote['start_date']) && $quote['start_date'] !== '0000-00-00' && $quote['start_date'] !== null): ?>
                             <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
                                 <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['start_date'] ?>:</span>
@@ -1849,9 +1864,17 @@ function formatPriceWithCurrency($price, $currency) {
                             <?php if (!empty($quote['volume'])): ?>
                             <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
                                 <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['volume'] ?>:</span>
-                                <span     style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
-                                       >
+                                <span style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right;">
                                     <?php echo number_format($quote['volume'], 2, ',', '.'); ?> m³
+                                </span>
+                            </div>
+                            <?php endif; ?>
+
+                            <?php if (!empty($quote['unit_price'])): ?>
+                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['unit_price'] ?>:</span>
+                                <span style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right;">
+                                    <?php echo number_format($quote['unit_price'], 2, ',', '.'); ?> <?php echo isset($quote['unit_price_currency']) ? htmlspecialchars($quote['unit_price_currency']) : 'EUR'; ?>
                                 </span>
                             </div>
                             <?php endif; ?>

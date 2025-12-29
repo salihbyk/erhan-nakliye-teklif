@@ -818,7 +818,23 @@ function formatPriceWithCurrency($price, $currency) {
 
                     <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
                         <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['transport_type'] ?>:</span>
-                        <span style="font-size: 9px;"><?php echo htmlspecialchars(!empty($quote['custom_transport_name']) ? $quote['custom_transport_name'] : translateTransportMode($quote['transport_name'], $t)); ?></span>
+                        <span style="font-size: 9px;"><?php 
+                            $transport_display = htmlspecialchars(!empty($quote['custom_transport_name']) ? $quote['custom_transport_name'] : translateTransportMode($quote['transport_name'], $t));
+                            if (!empty($quote['partial_transport']) && $quote['partial_transport'] == 1) {
+                                $transport_display .= ' / ' . ($is_english ? 'Partial Transport' : 'Parsiyel Taşıma');
+                            }
+                            echo $transport_display;
+                        ?></span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['origin'] ?>:</span>
+                        <span style="font-size: 9px;"><?php echo htmlspecialchars($quote['origin']); ?></span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['destination'] ?>:</span>
+                        <span style="font-size: 9px;"><?php echo htmlspecialchars($quote['destination']); ?></span>
                     </div>
 
                     <?php if (!empty($quote['description'])): ?>
@@ -837,13 +853,6 @@ function formatPriceWithCurrency($price, $currency) {
                     </div>
                     <?php endif; ?>
 
-                    <?php if (!empty($quote['volume'])): ?>
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
-                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['volume'] ?>:</span>
-                        <span style="font-size: 9px;"><?php echo number_format($quote['volume'], 2, ',', '.'); ?> m³</span>
-                    </div>
-                    <?php endif; ?>
-
                     <?php if (strtolower($quote['transport_name']) === 'havayolu' && !empty($quote['pieces'])): ?>
                     <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
                         <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['pieces'] ?>:</span>
@@ -854,16 +863,6 @@ function formatPriceWithCurrency($price, $currency) {
 
                 <!-- Right Column -->
                 <div>
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
-                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['origin'] ?>:</span>
-                        <span style="font-size: 9px;"><?php echo htmlspecialchars($quote['origin']); ?></span>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
-                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['destination'] ?>:</span>
-                        <span style="font-size: 9px;"><?php echo htmlspecialchars($quote['destination']); ?></span>
-                    </div>
-
                     <?php if (!empty($quote['start_date']) && $quote['start_date'] !== '0000-00-00' && $quote['start_date'] !== null): ?>
                     <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
                         <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['start_date'] ?>:</span>
@@ -875,6 +874,20 @@ function formatPriceWithCurrency($price, $currency) {
                     <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
                         <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['delivery_date'] ?>:</span>
                         <span style="font-size: 9px;"><?php echo formatDate($quote['delivery_date']); ?></span>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($quote['volume'])): ?>
+                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['volume'] ?>:</span>
+                        <span style="font-size: 9px;"><?php echo number_format($quote['volume'], 2, ',', '.'); ?> m³</span>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($quote['unit_price'])): ?>
+                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['unit_price'] ?>:</span>
+                        <span style="font-size: 9px;"><?php echo number_format($quote['unit_price'], 2, ',', '.'); ?> <?php echo isset($quote['unit_price_currency']) ? htmlspecialchars($quote['unit_price_currency']) : 'EUR'; ?></span>
                     </div>
                     <?php endif; ?>
 

@@ -28,6 +28,24 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Parsiyel taşıma checkbox'larını dinle
+    const partialCheckboxes = document.querySelectorAll('.partial-transport-checkbox');
+    partialCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function(e) {
+            e.stopPropagation();
+            // Sadece seçili modun checkbox'ını işaretle
+            const mode = this.dataset.mode;
+            partialCheckboxes.forEach(cb => {
+                if (cb.dataset.mode !== mode) {
+                    cb.checked = false;
+                }
+            });
+            // Hidden input'u güncelle
+            document.getElementById('partialTransport').value = this.checked ? '1' : '0';
+            console.log('Partial transport:', this.checked);
+        });
+    });
+
     // Taşıma modu ve işlem türü seçimi
     const tradeButtons = document.querySelectorAll('.trade-btn');
     console.log('Found trade buttons:', tradeButtons.length);
@@ -55,6 +73,13 @@ document.addEventListener('DOMContentLoaded', function() {
             // Yeni seçimi ekle
             this.classList.add('selected');
             this.closest('.transport-option').classList.add('selected');
+
+            // Tüm parsiyel taşıma checkbox'larını temizle
+            partialCheckboxes.forEach(cb => {
+                cb.checked = false;
+            });
+            // Hidden input'u da sıfırla
+            document.getElementById('partialTransport').value = '0';
 
             // Hidden inputları güncelle
             document.getElementById('selectedMode').value = selectedMode;
@@ -410,6 +435,7 @@ function submitForm() {
         pieces: document.getElementById('pieces').value,
         cargoType: document.getElementById('cargoType').value,
         tradeType: document.getElementById('tradeType').value,
+        partialTransport: document.getElementById('partialTransport').value,
         startDate: document.getElementById('startDate').value,
         deliveryDate: document.getElementById('deliveryDate').value,
         description: document.getElementById('description').value.trim()
