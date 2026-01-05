@@ -884,9 +884,7 @@ function formatPriceWithCurrency($price, $currency) {
                     </div>
                     <?php endif; ?>
 
-                    <?php if (!empty($quote['unit_price'])): ?>
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
-                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['unit_price'] ?>:</span>
+                <?php if (!empty($quote['unit_price']) && $quote['unit_price'] > 0): ?>
                         <span style="font-size: 9px;"><?php echo number_format($quote['unit_price'], 2, ',', '.'); ?> <?php echo isset($quote['unit_price_currency']) ? htmlspecialchars($quote['unit_price_currency']) : 'EUR'; ?></span>
                     </div>
                     <?php endif; ?>

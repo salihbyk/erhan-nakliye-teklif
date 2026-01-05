@@ -1870,9 +1870,7 @@ function formatPriceWithCurrency($price, $currency) {
                             </div>
                             <?php endif; ?>
 
-                            <?php if (!empty($quote['unit_price'])): ?>
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['unit_price'] ?>:</span>
+                        <?php if (!empty($quote['unit_price']) && $quote['unit_price'] > 0): ?>
                                 <span style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right;">
                                     <?php echo number_format($quote['unit_price'], 2, ',', '.'); ?> <?php echo isset($quote['unit_price_currency']) ? htmlspecialchars($quote['unit_price_currency']) : 'EUR'; ?>
                                 </span>

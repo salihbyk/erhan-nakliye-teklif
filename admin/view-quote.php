@@ -2033,24 +2033,24 @@ function formatPriceWithCurrency($price, $currency) {
                                 </span>
                             </div>
 
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['unit_price'] ?>:</span>
-                                <span style="cursor: default; padding: 2px 6px; border-radius: 3px; display: flex; gap: 8px; align-items: center;">
-                                    <span class="editable" data-field="unit_price" data-type="number" data-step="0.01" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right; flex: 1;"
-                                          onclick="editField(this)" title="Düzenlemek için tıklayın">
-                                        <?php echo !empty($quote['unit_price']) ? number_format($quote['unit_price'], 2, ',', '.') : ($is_english ? 'Click to add' : 'Eklemek için tıkla'); ?>
-                                    </span>
-                                    <select class="form-select form-select-sm" style="width: 65px; font-size: 11px; padding: 4px 6px; border: 1px solid #dee2e6; border-radius: 4px; background-color: #fff; appearance: none; -webkit-appearance: none; -moz-appearance: none; cursor: pointer; background-image: none;" 
-                                            onchange="updateUnitPriceCurrency(this.value)">
-                                        <option value="EUR" <?= (!isset($quote['unit_price_currency']) || $quote['unit_price_currency'] == 'EUR') ? 'selected' : '' ?>>EUR</option>
-                                        <option value="USD" <?= (isset($quote['unit_price_currency']) && $quote['unit_price_currency'] == 'USD') ? 'selected' : '' ?>>USD</option>
-                                        <option value="TL" <?= (isset($quote['unit_price_currency']) && $quote['unit_price_currency'] == 'TL') ? 'selected' : '' ?>>TL</option>
-                                        <option value="GBP" <?= (isset($quote['unit_price_currency']) && $quote['unit_price_currency'] == 'GBP') ? 'selected' : '' ?>>GBP</option>
-                                    </select>
+                        <?php if (!empty($quote['unit_price']) && $quote['unit_price'] > 0): ?>
+                        <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
+                            <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['unit_price'] ?>:</span>
+                            <span style="cursor: default; padding: 2px 6px; border-radius: 3px; display: flex; gap: 8px; align-items: center;">
+                                <span class="editable" data-field="unit_price" data-type="number" data-step="0.01" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right; flex: 1;"
+                                      onclick="editField(this)" title="Düzenlemek için tıklayın">
+                                    <?php echo !empty($quote['unit_price']) ? number_format($quote['unit_price'], 2, ',', '.') : ($is_english ? 'Click to add' : 'Eklemek için tıkla'); ?>
                                 </span>
-                            </div>
-
+                                <select class="form-select form-select-sm" style="width: 65px; font-size: 11px; padding: 4px 6px; border: 1px solid #dee2e6; border-radius: 4px; background-color: #fff; appearance: none; -webkit-appearance: none; -moz-appearance: none; cursor: pointer; background-image: none;" 
+                                        onchange="updateUnitPriceCurrency(this.value)">
+                                    <option value="EUR" <?= (!isset($quote['unit_price_currency']) || $quote['unit_price_currency'] == 'EUR') ? 'selected' : '' ?>>EUR</option>
+                                    <option value="USD" <?= (isset($quote['unit_price_currency']) && $quote['unit_price_currency'] == 'USD') ? 'selected' : '' ?>>USD</option>
+                                    <option value="TL" <?= (isset($quote['unit_price_currency']) && $quote['unit_price_currency'] == 'TL') ? 'selected' : '' ?>>TL</option>
+                                    <option value="GBP" <?= (isset($quote['unit_price_currency']) && $quote['unit_price_currency'] == 'GBP') ? 'selected' : '' ?>>GBP</option>
+                                </select>
+                            </span>
                         </div>
+                        <?php endif; ?>
 
                         <!-- Custom Field'lar buraya dinamik olarak eklenecek -->
                         <div id="additionalGeneralInfoRows" style="display: contents;">
