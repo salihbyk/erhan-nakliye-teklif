@@ -1,4 +1,4 @@
-# Changelog v2.7.0 (05.01.2026)
+# Changelog v2.8.0 (05.01.2026)
 
 ## Düzeltmeler
 - **Birim m³ Fiyatı Gösterimi:** Boş bırakılan veya 0 olarak girilen birim m³ fiyatı artık teklif görünümünde görünmüyor
