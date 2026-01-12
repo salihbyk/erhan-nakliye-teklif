@@ -1009,8 +1009,11 @@ function formatPriceWithCurrency($price, $currency) {
 
         foreach ($section_order as $secKey) {
             if ($secKey === 'services') {
-                // Başlık önceliği: template -> çeviri
-                $services_label = !empty($quote['template_services_title']) ? $quote['template_services_title'] : $t['services'];
+                // Başlık: custom_fields -> template -> varsayılan
+                $services_label = $t['services'];
+                if (!empty($quote['template_services_title'])) { $services_label = $quote['template_services_title']; }
+                if (!empty($custom_fields['custom_services_title'])) { $services_label = $custom_fields['custom_services_title']; }
+                
                 echo '<div class="form-section" data-section="services">';
                 echo '  <div class="section-header">';
                 echo '    <div class="section-label">' . htmlspecialchars($services_label) . '</div>';
@@ -1048,7 +1051,11 @@ function formatPriceWithCurrency($price, $currency) {
                 echo '  </div>';
                 echo '</div>';
             } elseif ($secKey === 'transport' || $secKey === 'transport_process') {
-                $trans_label = !empty($quote['template_transport_process_title']) ? $quote['template_transport_process_title'] : ($is_english ? 'Transport Process' : 'Taşınma Süreci');
+                // Başlık: custom_fields -> template -> varsayılan
+                $trans_label = $is_english ? 'Transport Process' : 'Taşınma Süreci';
+                if (!empty($quote['template_transport_process_title'])) { $trans_label = $quote['template_transport_process_title']; }
+                if (!empty($custom_fields['custom_transport_process_title'])) { $trans_label = $custom_fields['custom_transport_process_title']; }
+                
                 echo '<div class="form-section" data-section="transport_process">';
                 echo '  <div class="section-header">';
                 echo '    <div class="section-label">' . htmlspecialchars($trans_label) . '</div>';
@@ -1089,13 +1096,11 @@ function formatPriceWithCurrency($price, $currency) {
                 echo '  </div>';
                 echo '</div>';
             } elseif ($secKey === 'terms') {
-                $terms_label = !empty($quote['template_terms_title']) ? $quote['template_terms_title'] : $t['terms'];
-                echo '<div class="form-section" data-section="terms">';
-                echo '  <div class="section-header">';
-                echo '    <div class="section-label">' . htmlspecialchars($terms_label) . '</div>';
-                echo '    <div class="section-title"></div>';
-                echo '  </div>';
-                echo '  <div class="form-content">';
+                // Başlık: custom_fields -> template -> varsayılan
+                $terms_label = $t['terms'];
+                if (!empty($quote['template_terms_title'])) { $terms_label = $quote['template_terms_title']; }
+                if (!empty($custom_fields['custom_terms_title'])) { $terms_label = $custom_fields['custom_terms_title']; }
+                
                 $terms_content = $quote['terms_content'] ?? $quote['template_terms_content'] ?? '';
                 if (!empty($terms_content)) {
                     $terms_content = str_replace('{customer_name}', htmlspecialchars($quote['first_name'] . ' ' . $quote['last_name']), $terms_content);
@@ -1111,10 +1116,17 @@ function formatPriceWithCurrency($price, $currency) {
                     $terms_content = str_replace('{trade_type}', $quote['trade_type'] ?? '', $terms_content);
                     $terms_content = str_replace('{start_date}', $quote['start_date'] ? formatDate($quote['start_date']) : $t['not_specified'], $terms_content);
                     $terms_content = str_replace('{delivery_date}', $quote['delivery_date'] ? formatDate($quote['delivery_date']) : $t['not_specified'], $terms_content);
+
+                    echo '<div class="form-section" data-section="terms">';
+                    echo '  <div class="section-header">';
+                    echo '    <div class="section-label">' . htmlspecialchars($terms_label) . '</div>';
+                    echo '    <div class="section-title"></div>';
+                    echo '  </div>';
+                    echo '  <div class="form-content">';
                     echo $terms_content;
+                    echo '  </div>';
+                    echo '</div>';
                 }
-                echo '  </div>';
-                echo '</div>';
             } elseif (strpos($secKey, 'dynamic_') === 0) {
                 $idPart = substr($secKey, strlen('dynamic_'));
                 $titleKey = 'dynamic_section_' . $idPart . '_title';
