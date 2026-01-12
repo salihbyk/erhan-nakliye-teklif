@@ -1736,53 +1736,66 @@ function formatPriceWithCurrency($price, $currency) {
 
                 </div>
 
-                                                                                                                                <!-- General Information - Compact 2 Column Layout -->
+                <!-- General Information - Modern 2 Column Layout -->
                 <div class="form-section" style="margin: 0px 0;">
                     <div class="section-header">
                         <div class="section-label"><?= $is_english ? 'General Transportation Information' : 'Taşımaya Dair Genel Bilgiler' ?></div>
                         <div class="section-title"></div>
                     </div>
 
-                    <!-- Content in 2 columns - Compact Layout -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; background: white; padding: 15px 20px;">
+                    <?php
+                    // Custom fields'ları önceden hazırla
+                    $leftCustomFields = [];
+                    $rightCustomFields = [];
+                    if (!empty($quote['custom_fields'])) {
+                        $custom_fields = json_decode($quote['custom_fields'], true);
+                        if ($custom_fields && is_array($custom_fields)) {
+                            $maxRowNumber = 0;
+                            foreach (array_keys($custom_fields) as $key) {
+                                if (preg_match('/custom_(?:label|value|label2|value2)_(\d+)/', $key, $matches)) {
+                                    $rowNum = intval($matches[1]);
+                                    if ($rowNum > $maxRowNumber) $maxRowNumber = $rowNum;
+                                }
+                            }
+                            for ($i = 1; $i <= $maxRowNumber; $i++) {
+                                if (isset($custom_fields["custom_label_$i"]) && isset($custom_fields["custom_value_$i"])) {
+                                    $leftCustomFields[] = ['label' => $custom_fields["custom_label_$i"], 'value' => $custom_fields["custom_value_$i"]];
+                                }
+                                if (isset($custom_fields["custom_label2_$i"]) && isset($custom_fields["custom_value2_$i"])) {
+                                    $rightCustomFields[] = ['label' => $custom_fields["custom_label2_$i"], 'value' => $custom_fields["custom_value2_$i"]];
+                                }
+                            }
+                        }
+                    }
+                    ?>
 
-                                                <!-- Left Column -->
-                        <div>
+                    <!-- Two Column Flex Layout -->
+                    <div style="display: flex; gap: 40px; background: white; padding: 15px 20px;">
+                        
+                        <!-- Sol Kolon -->
+                        <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
                             <?php if (!empty($quote['company'])): ?>
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['company'] ?>:</span>
-                                <span   style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
-                                       >
-                                    <?php echo htmlspecialchars($quote['company']); ?>
-                                </span>
-                            </div>
-                                                        <?php endif; ?>
-
-
-
-
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['quote_date'] ?>:</span>
-                                <span    style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
-                                       >
-                                    <?php echo formatDate($quote['created_at']); ?>
-                                </span>
-                            </div>
-
-                            <?php if (!empty($quote['valid_until']) && $quote['valid_until'] !== '0000-00-00'): ?>
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['validity'] ?>:</span>
-                                <span    style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
-                                       >
-                                    <?php echo formatDate($quote['valid_until']); ?>
-                                </span>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px;"><?= $t['company'] ?>:</span>
+                                <span style="color: #333; font-size: 13px;"><?= htmlspecialchars($quote['company']) ?></span>
                             </div>
                             <?php endif; ?>
 
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['transport_type'] ?>:</span>
-                                <span   style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
-                                       >
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px;"><?= $t['quote_date'] ?>:</span>
+                                <span style="color: #333; font-size: 13px;"><?= formatDate($quote['created_at']) ?></span>
+                            </div>
+
+                            <?php if (!empty($quote['valid_until']) && $quote['valid_until'] !== '0000-00-00'): ?>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px;"><?= $t['validity'] ?>:</span>
+                                <span style="color: #333; font-size: 13px;"><?= formatDate($quote['valid_until']) ?></span>
+                            </div>
+                            <?php endif; ?>
+
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px;"><?= $t['transport_type'] ?>:</span>
+                                <span style="color: #333; font-size: 13px;">
                                     <?php 
                                         $transport_display = htmlspecialchars(!empty($quote['custom_transport_name']) ? $quote['custom_transport_name'] : translateTransportMode($quote['transport_name'], $t));
                                         if (!empty($quote['partial_transport']) && $quote['partial_transport'] == 1) {
@@ -1793,184 +1806,85 @@ function formatPriceWithCurrency($price, $currency) {
                                 </span>
                             </div>
 
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['origin'] ?>:</span>
-                                <span   style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
-                                       >
-                                    <?php echo htmlspecialchars($quote['origin']); ?>
-                                </span>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px;"><?= $t['origin'] ?>:</span>
+                                <span style="color: #333; font-size: 13px;"><?= htmlspecialchars($quote['origin']) ?></span>
                             </div>
 
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['destination'] ?>:</span>
-                                <span   style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
-                                       >
-                                    <?php echo htmlspecialchars($quote['destination']); ?>
-                                </span>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px;"><?= $t['destination'] ?>:</span>
+                                <span style="color: #333; font-size: 13px;"><?= htmlspecialchars($quote['destination']) ?></span>
                             </div>
 
                             <?php if (!empty($quote['description'])): ?>
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; margin-bottom: 8px; min-height: 24px;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['description'] ?>:</span>
-                                <span style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; line-height: 1.6; word-wrap: break-word; white-space: normal;">
-                                    <?php echo nl2br(htmlspecialchars($quote['description'])); ?>
-                                </span>
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; flex-shrink: 0;"><?= $t['description'] ?>:</span>
+                                <span style="color: #333; font-size: 13px; text-align: right; margin-left: 10px;"><?= nl2br(htmlspecialchars($quote['description'])) ?></span>
                             </div>
                             <?php endif; ?>
 
                             <?php if (strtolower($quote['transport_name']) === 'havayolu' && !empty($quote['weight'])): ?>
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['weight'] ?>:</span>
-                                <span    style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
-                                       >
-                                    <?php echo number_format($quote['weight'], 0, ',', '.'); ?> kg
-                                </span>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px;"><?= $t['weight'] ?>:</span>
+                                <span style="color: #333; font-size: 13px;"><?= number_format($quote['weight'], 0, ',', '.') ?> kg</span>
                             </div>
                             <?php endif; ?>
+
                             <?php if (strtolower($quote['transport_name']) === 'havayolu' && !empty($quote['pieces'])): ?>
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['pieces'] ?>:</span>
-                                <span    style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
-                                       >
-                                    <?php echo number_format($quote['pieces'], 0, ',', '.'); ?>
-                                </span>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px;"><?= $t['pieces'] ?>:</span>
+                                <span style="color: #333; font-size: 13px;"><?= number_format($quote['pieces'], 0, ',', '.') ?></span>
                             </div>
                             <?php endif; ?>
+
+                            <!-- Sol Kolon Custom Fields -->
+                            <?php foreach ($leftCustomFields as $field): ?>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px;"><?= htmlspecialchars($field['label']) ?></span>
+                                <span style="color: #333; font-size: 13px;"><?= htmlspecialchars($field['value']) ?></span>
+                            </div>
+                            <?php endforeach; ?>
                         </div>
 
-
-                        <!-- Right Column -->
-                        <div>
+                        <!-- Sağ Kolon -->
+                        <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
                             <?php if (!empty($quote['start_date']) && $quote['start_date'] !== '0000-00-00' && $quote['start_date'] !== null): ?>
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['start_date'] ?>:</span>
-                                <span    style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
-                                       >
-                                    <?php echo formatDate($quote['start_date']); ?>
-                                </span>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px;"><?= $t['start_date'] ?>:</span>
+                                <span style="color: #333; font-size: 13px;"><?= formatDate($quote['start_date']) ?></span>
                             </div>
                             <?php endif; ?>
 
                             <?php if (!empty($quote['delivery_date']) && $quote['delivery_date'] !== '0000-00-00' && $quote['delivery_date'] !== null): ?>
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['delivery_date'] ?>:</span>
-                                <span    style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s;"
-                                       >
-                                    <?php echo formatDate($quote['delivery_date']); ?>
-                                </span>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px;"><?= $t['delivery_date'] ?>:</span>
+                                <span style="color: #333; font-size: 13px;"><?= formatDate($quote['delivery_date']) ?></span>
                             </div>
                             <?php endif; ?>
 
                             <?php if (!empty($quote['volume'])): ?>
-                            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"><?= $t['volume'] ?>:</span>
-                                <span style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right;">
-                                    <?php echo number_format($quote['volume'], 2, ',', '.'); ?> m³
-                                </span>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px;"><?= $t['volume'] ?>:</span>
+                                <span style="color: #333; font-size: 13px;"><?= number_format($quote['volume'], 2, ',', '.') ?> m³</span>
                             </div>
                             <?php endif; ?>
 
-                        <?php if (!empty($quote['unit_price']) && $quote['unit_price'] > 0): ?>
-                                <span style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right;">
-                                    <?php echo number_format($quote['unit_price'], 2, ',', '.'); ?> <?php echo isset($quote['unit_price_currency']) ? htmlspecialchars($quote['unit_price_currency']) : 'EUR'; ?>
-                                </span>
+                            <?php if (!empty($quote['unit_price']) && $quote['unit_price'] > 0): ?>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px;"><?= $t['unit_price'] ?>:</span>
+                                <span style="color: #333; font-size: 13px;"><?= number_format($quote['unit_price'], 2, ',', '.') ?> <?= isset($quote['unit_price_currency']) ? htmlspecialchars($quote['unit_price_currency']) : 'EUR' ?></span>
                             </div>
                             <?php endif; ?>
 
+                            <!-- Sağ Kolon Custom Fields -->
+                            <?php foreach ($rightCustomFields as $field): ?>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="font-weight: 600; color: #2c5aa0; font-size: 13px;"><?= htmlspecialchars($field['label']) ?></span>
+                                <span style="color: #333; font-size: 13px;"><?= htmlspecialchars($field['value']) ?></span>
+                            </div>
+                            <?php endforeach; ?>
                         </div>
-
-                        <!-- Custom Fields (Özel Alanlar) -->
-                        <?php
-                        // Custom alanları varsa göster
-                        if (!empty($quote['custom_fields'])) {
-                            $custom_fields = json_decode($quote['custom_fields'], true);
-                            if ($custom_fields && is_array($custom_fields) && count($custom_fields) > 0) {
-                            // Custom alanları grup halinde organize et (her 4 alan 1 satır - 2 left, 2 right)
-                            $fieldKeys = array_keys($custom_fields);
-                            $fieldPairs = [];
-
-                            for ($i = 0; $i < count($fieldKeys); $i += 4) {
-                                $label1 = isset($fieldKeys[$i]) ? $fieldKeys[$i] : null;
-                                $value1 = isset($fieldKeys[$i + 1]) ? $fieldKeys[$i + 1] : null;
-                                $label2 = isset($fieldKeys[$i + 2]) ? $fieldKeys[$i + 2] : null;
-                                $value2 = isset($fieldKeys[$i + 3]) ? $fieldKeys[$i + 3] : null;
-
-                                if ($label1 && $value1) {
-                                    $fieldPairs[] = [
-                                        'label1' => $label1,
-                                        'value1' => $value1,
-                                        'label2' => $label2,
-                                        'value2' => $value2
-                                    ];
-                                }
-                            }
-
-                            // Custom field'ları organiza et (admin ile aynı formatta)
-                            $organizedFields = [];
-                            $maxRowNumber = 0;
-
-                            foreach ($fieldKeys as $key) {
-                                if (preg_match('/custom_(?:label|value|label2|value2)_(\d+)/', $key, $matches)) {
-                                    $rowNum = intval($matches[1]);
-                                    if ($rowNum > $maxRowNumber) {
-                                        $maxRowNumber = $rowNum;
-                                    }
-                                }
-                            }
-
-                            // Organize fields by row number
-                            for ($i = 1; $i <= $maxRowNumber; $i++) {
-                                $label1Key = "custom_label_$i";
-                                $value1Key = "custom_value_$i";
-                                $label2Key = "custom_label2_$i";
-                                $value2Key = "custom_value2_$i";
-
-                                if (isset($custom_fields[$label1Key]) && isset($custom_fields[$value1Key])) {
-                                    $organizedFields[] = [
-                                        'label1' => $label1Key,
-                                        'value1' => $value1Key,
-                                        'label2' => isset($custom_fields[$label2Key]) ? $label2Key : null,
-                                        'value2' => isset($custom_fields[$value2Key]) ? $value2Key : null
-                                    ];
-                                }
-                            }
-
-                                                        // Ana grid container'ın içinde devam et
-                            if (!empty($organizedFields)) {
-                                // Section title ve ayırıcı gizlendi
-                                // Ek olarak başlığı ve çizgi görünmeyecek
-
-                                foreach ($organizedFields as $pair) {
-                                    // Sol kolon
-                                    echo '<div>';
-                                    if (isset($custom_fields[$pair['label1']]) && isset($custom_fields[$pair['value1']])) {
-                                        echo '<div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">';
-                                        echo '<span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;">' . htmlspecialchars($custom_fields[$pair['label1']]) . ':</span>';
-                                        echo '<span style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right;">';
-                                        echo htmlspecialchars($custom_fields[$pair['value1']]);
-                                        echo '</span>';
-                                        echo '</div>';
-                                    }
-                                    echo '</div>';
-
-                                    // Sağ kolon
-                                    echo '<div>';
-                                    if ($pair['label2'] && $pair['value2'] && isset($custom_fields[$pair['label2']]) && isset($custom_fields[$pair['value2']])) {
-                                        echo '<div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">';
-                                        echo '<span style="font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;">' . htmlspecialchars($custom_fields[$pair['label2']]) . ':</span>';
-                                        echo '<span style="cursor: default; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right;">';
-                                        echo htmlspecialchars($custom_fields[$pair['value2']]);
-                                        echo '</span>';
-                                        echo '</div>';
-                                    }
-                                    echo '</div>';
-                                }
-                            }
-                        }
-                    }
-                    ?>
                     </div>
-
                 </div>
                     </div>
 

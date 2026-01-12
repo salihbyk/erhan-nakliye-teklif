@@ -189,6 +189,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         }
     }
 
+    if ($action === 'save_custom_fields_order' && $quote_number) {
+        try {
+            $database = new Database();
+            $db = $database->getConnection();
+            
+            $order = $_POST['order'] ?? '[]';
+            
+            // custom_fields_order kolonu var mı kontrol et ve gerekirse ekle
+            try {
+                $stmt = $db->prepare("SHOW COLUMNS FROM quotes LIKE 'custom_fields_order'");
+                $stmt->execute();
+                $columnExists = $stmt->fetch();
+
+                if (!$columnExists) {
+                    $db->exec("ALTER TABLE quotes ADD COLUMN custom_fields_order TEXT AFTER custom_fields");
+                }
+            } catch (Exception $e) {
+                error_log("Custom fields order column check error: " . $e->getMessage());
+            }
+            
+            // Sıralamayı kaydet
+            $stmt = $db->prepare("UPDATE quotes SET custom_fields_order = ?, updated_at = NOW() WHERE quote_number = ?");
+            $stmt->execute([$order, $quote_number]);
+            
+            echo json_encode(['success' => true, 'message' => 'Sıralama kaydedildi']);
+            exit;
+            
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            exit;
+        }
+    }
+
     echo json_encode(['success' => false, 'message' => 'Geçersiz işlem']);
     exit;
 }

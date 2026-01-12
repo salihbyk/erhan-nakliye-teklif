@@ -25,7 +25,9 @@ try {
     $stmt = $db->prepare("
         SELECT q.*, c.first_name, c.last_name, c.email, c.phone, c.company,
                tm.name as transport_name, tm.icon as transport_icon, tm.template,
-               qt.services_content as template_services_content, qt.terms_content as template_terms_content,
+               qt.services_content as template_services_content, qt.terms_content as template_terms_content, qt.transport_process_content as template_transport_process_content,
+               qt.services_title as template_services_title, qt.transport_process_title as template_transport_process_title, qt.terms_title as template_terms_title,
+               qt.dynamic_sections as template_dynamic_sections, qt.section_order as template_section_order,
                qt.currency, qt.language,
                cl.name as cost_list_name, cl.file_name as cost_list_file_name, cl.file_path as cost_list_file_path
         FROM quotes q
@@ -785,127 +787,155 @@ function formatPriceWithCurrency($price, $currency) {
             </div>
         </div>
 
-        <!-- General Information - Compact 2 Column Layout -->
+        <!-- General Information - Modern 2 Column Layout -->
         <div class="form-section" style="margin: 0px 0;">
             <div class="section-header">
                 <div class="section-label"><?= $is_english ? 'General Transportation Information' : 'Taşımaya Dair Genel Bilgiler' ?></div>
                 <div class="section-title"></div>
             </div>
 
-            <!-- Content in 2 columns - Compact Layout -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; background: white; padding: 10px 15px;">
+            <?php
+            // Custom fields'ları önceden hazırla
+            $leftCustomFields = [];
+            $rightCustomFields = [];
+            if (!empty($quote['custom_fields'])) {
+                $custom_fields = json_decode($quote['custom_fields'], true);
+                if ($custom_fields && is_array($custom_fields)) {
+                    $maxRowNumber = 0;
+                    foreach (array_keys($custom_fields) as $key) {
+                        if (preg_match('/custom_(?:label|value|label2|value2)_(\d+)/', $key, $matches)) {
+                            $rowNum = intval($matches[1]);
+                            if ($rowNum > $maxRowNumber) $maxRowNumber = $rowNum;
+                        }
+                    }
+                    for ($i = 1; $i <= $maxRowNumber; $i++) {
+                        if (isset($custom_fields["custom_label_$i"]) && isset($custom_fields["custom_value_$i"])) {
+                            $leftCustomFields[] = ['label' => $custom_fields["custom_label_$i"], 'value' => $custom_fields["custom_value_$i"]];
+                        }
+                        if (isset($custom_fields["custom_label2_$i"]) && isset($custom_fields["custom_value2_$i"])) {
+                            $rightCustomFields[] = ['label' => $custom_fields["custom_label2_$i"], 'value' => $custom_fields["custom_value2_$i"]];
+                        }
+                    }
+                }
+            }
+            ?>
 
-                <!-- Left Column -->
-                <div>
+            <!-- Two Column Flex Layout -->
+            <div style="display: flex; gap: 30px; background: white; padding: 10px 15px;">
+                
+                <!-- Sol Kolon -->
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
                     <?php if (!empty($quote['company'])): ?>
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
-                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['company'] ?>:</span>
-                        <span style="font-size: 9px;"><?php echo htmlspecialchars($quote['company']); ?></span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px;"><?= $t['company'] ?>:</span>
+                        <span style="color: #333; font-size: 9px;"><?= htmlspecialchars($quote['company']) ?></span>
                     </div>
                     <?php endif; ?>
 
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
-                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['quote_date'] ?>:</span>
-                        <span style="font-size: 9px;"><?php echo formatDate($quote['created_at']); ?></span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px;"><?= $t['quote_date'] ?>:</span>
+                        <span style="color: #333; font-size: 9px;"><?= formatDate($quote['created_at']) ?></span>
                     </div>
 
                     <?php if (!empty($quote['valid_until']) && $quote['valid_until'] !== '0000-00-00'): ?>
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
-                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['validity'] ?>:</span>
-                        <span style="font-size: 9px;"><?php echo formatDate($quote['valid_until']); ?></span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px;"><?= $t['validity'] ?>:</span>
+                        <span style="color: #333; font-size: 9px;"><?= formatDate($quote['valid_until']) ?></span>
                     </div>
                     <?php endif; ?>
 
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
-                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['transport_type'] ?>:</span>
-                        <span style="font-size: 9px;"><?php 
-                            $transport_display = htmlspecialchars(!empty($quote['custom_transport_name']) ? $quote['custom_transport_name'] : translateTransportMode($quote['transport_name'], $t));
-                            if (!empty($quote['partial_transport']) && $quote['partial_transport'] == 1) {
-                                $transport_display .= ' / ' . ($is_english ? 'Partial Transport' : 'Parsiyel Taşıma');
-                            }
-                            echo $transport_display;
-                        ?></span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px;"><?= $t['transport_type'] ?>:</span>
+                        <span style="color: #333; font-size: 9px;">
+                            <?php 
+                                $transport_display = htmlspecialchars(!empty($quote['custom_transport_name']) ? $quote['custom_transport_name'] : translateTransportMode($quote['transport_name'], $t));
+                                if (!empty($quote['partial_transport']) && $quote['partial_transport'] == 1) {
+                                    $transport_display .= ' / ' . ($is_english ? 'Partial Transport' : 'Parsiyel Taşıma');
+                                }
+                                echo $transport_display;
+                            ?>
+                        </span>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
-                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['origin'] ?>:</span>
-                        <span style="font-size: 9px;"><?php echo htmlspecialchars($quote['origin']); ?></span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px;"><?= $t['origin'] ?>:</span>
+                        <span style="color: #333; font-size: 9px;"><?= htmlspecialchars($quote['origin']) ?></span>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
-                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['destination'] ?>:</span>
-                        <span style="font-size: 9px;"><?php echo htmlspecialchars($quote['destination']); ?></span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px;"><?= $t['destination'] ?>:</span>
+                        <span style="color: #333; font-size: 9px;"><?= htmlspecialchars($quote['destination']) ?></span>
                     </div>
 
                     <?php if (!empty($quote['description'])): ?>
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: start; margin-bottom: 6px; min-height: 18px;">
-                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['description'] ?>:</span>
-                        <span style="font-size: 8px; line-height: 1.4; word-wrap: break-word; white-space: normal;">
-                            <?php echo nl2br(htmlspecialchars($quote['description'])); ?>
-                        </span>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 3px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; flex-shrink: 0;"><?= $t['description'] ?>:</span>
+                        <span style="color: #333; font-size: 8px; text-align: right; margin-left: 8px;"><?= nl2br(htmlspecialchars($quote['description'])) ?></span>
                     </div>
                     <?php endif; ?>
 
                     <?php if (strtolower($quote['transport_name']) === 'havayolu' && !empty($quote['weight'])): ?>
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
-                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['weight'] ?>:</span>
-                        <span style="font-size: 9px;"><?php echo number_format($quote['weight'], 0, ',', '.'); ?> kg</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px;"><?= $t['weight'] ?>:</span>
+                        <span style="color: #333; font-size: 9px;"><?= number_format($quote['weight'], 0, ',', '.') ?> kg</span>
                     </div>
                     <?php endif; ?>
 
                     <?php if (strtolower($quote['transport_name']) === 'havayolu' && !empty($quote['pieces'])): ?>
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
-                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['pieces'] ?>:</span>
-                        <span style="font-size: 9px;"><?php echo number_format($quote['pieces'], 0, ',', '.'); ?></span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px;"><?= $t['pieces'] ?>:</span>
+                        <span style="color: #333; font-size: 9px;"><?= number_format($quote['pieces'], 0, ',', '.') ?></span>
                     </div>
                     <?php endif; ?>
+
+                    <!-- Sol Kolon Custom Fields -->
+                    <?php foreach ($leftCustomFields as $field): ?>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px;"><?= htmlspecialchars($field['label']) ?></span>
+                        <span style="color: #333; font-size: 9px;"><?= htmlspecialchars($field['value']) ?></span>
+                    </div>
+                    <?php endforeach; ?>
                 </div>
 
-                <!-- Right Column -->
-                <div>
+                <!-- Sağ Kolon -->
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
                     <?php if (!empty($quote['start_date']) && $quote['start_date'] !== '0000-00-00' && $quote['start_date'] !== null): ?>
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
-                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['start_date'] ?>:</span>
-                        <span style="font-size: 9px;"><?php echo formatDate($quote['start_date']); ?></span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px;"><?= $t['start_date'] ?>:</span>
+                        <span style="color: #333; font-size: 9px;"><?= formatDate($quote['start_date']) ?></span>
                     </div>
                     <?php endif; ?>
 
                     <?php if (!empty($quote['delivery_date']) && $quote['delivery_date'] !== '0000-00-00' && $quote['delivery_date'] !== null): ?>
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
-                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['delivery_date'] ?>:</span>
-                        <span style="font-size: 9px;"><?php echo formatDate($quote['delivery_date']); ?></span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px;"><?= $t['delivery_date'] ?>:</span>
+                        <span style="color: #333; font-size: 9px;"><?= formatDate($quote['delivery_date']) ?></span>
                     </div>
                     <?php endif; ?>
 
                     <?php if (!empty($quote['volume'])): ?>
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
-                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['volume'] ?>:</span>
-                        <span style="font-size: 9px;"><?php echo number_format($quote['volume'], 2, ',', '.'); ?> m³</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px;"><?= $t['volume'] ?>:</span>
+                        <span style="color: #333; font-size: 9px;"><?= number_format($quote['volume'], 2, ',', '.') ?> m³</span>
                     </div>
                     <?php endif; ?>
 
-                <?php if (!empty($quote['unit_price']) && $quote['unit_price'] > 0): ?>
-                        <span style="font-size: 9px;"><?php echo number_format($quote['unit_price'], 2, ',', '.'); ?> <?php echo isset($quote['unit_price_currency']) ? htmlspecialchars($quote['unit_price_currency']) : 'EUR'; ?></span>
+                    <?php if (!empty($quote['unit_price']) && $quote['unit_price'] > 0): ?>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px;"><?= $t['unit_price'] ?>:</span>
+                        <span style="color: #333; font-size: 9px;"><?= number_format($quote['unit_price'], 2, ',', '.') ?> <?= isset($quote['unit_price_currency']) ? htmlspecialchars($quote['unit_price_currency']) : 'EUR' ?></span>
                     </div>
                     <?php endif; ?>
 
                     <?php if (!empty($quote['cargo_type'])): ?>
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
-                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['cargo_type'] ?>:</span>
-                        <span style="font-size: 9px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px;"><?= $t['cargo_type'] ?>:</span>
+                        <span style="color: #333; font-size: 9px;">
                             <?php
                             if ($is_english) {
-                                $cargo_types = [
-                                    'ev_esyasi' => 'Household Goods',
-                                    'kisisel_esya' => 'Personal Effects',
-                                    'ticari_esya' => 'Commercial Goods'
-                                ];
+                                $cargo_types = ['ev_esyasi' => 'Household Goods', 'kisisel_esya' => 'Personal Effects', 'ticari_esya' => 'Commercial Goods'];
                             } else {
-                                $cargo_types = [
-                                    'ev_esyasi' => 'Ev Eşyası',
-                                    'kisisel_esya' => 'Kişisel Eşya',
-                                    'ticari_esya' => 'Ticari Eşya'
-                                ];
+                                $cargo_types = ['ev_esyasi' => 'Ev Eşyası', 'kisisel_esya' => 'Kişisel Eşya', 'ticari_esya' => 'Ticari Eşya'];
                             }
                             echo $cargo_types[$quote['cargo_type']] ?? htmlspecialchars($quote['cargo_type']);
                             ?>
@@ -914,119 +944,29 @@ function formatPriceWithCurrency($price, $currency) {
                     <?php endif; ?>
 
                     <?php if (!empty($quote['trade_type'])): ?>
-                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">
-                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;"><?= $t['trade_type'] ?>:</span>
-                        <span style="font-size: 9px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px;"><?= $t['trade_type'] ?>:</span>
+                        <span style="color: #333; font-size: 9px;">
                             <?php
                             if ($is_english) {
-                                $trade_types = [
-                                    'ithalat' => 'Import',
-                                    'ihracat' => 'Export'
-                                ];
+                                $trade_types = ['ithalat' => 'Import', 'ihracat' => 'Export'];
                             } else {
-                                $trade_types = [
-                                    'ithalat' => 'İthalat',
-                                    'ihracat' => 'İhracat'
-                                ];
+                                $trade_types = ['ithalat' => 'İthalat', 'ihracat' => 'İhracat'];
                             }
                             echo $trade_types[$quote['trade_type']] ?? htmlspecialchars($quote['trade_type']);
                             ?>
                         </span>
                     </div>
                     <?php endif; ?>
+
+                    <!-- Sağ Kolon Custom Fields -->
+                    <?php foreach ($rightCustomFields as $field): ?>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid #f0f0f0;">
+                        <span style="font-weight: 600; color: #2c5aa0; font-size: 9px;"><?= htmlspecialchars($field['label']) ?></span>
+                        <span style="color: #333; font-size: 9px;"><?= htmlspecialchars($field['value']) ?></span>
+                    </div>
+                    <?php endforeach; ?>
                 </div>
-            </div>
-
-                <!-- Custom Fields (Özel Alanlar) -->
-                <?php
-                // Custom alanları varsa göster
-                if (!empty($quote['custom_fields'])) {
-                    $custom_fields = json_decode($quote['custom_fields'], true);
-                    if ($custom_fields && is_array($custom_fields) && count($custom_fields) > 0) {
-                    // Custom alanları grup halinde organize et (her 4 alan 1 satır - 2 left, 2 right)
-                    $fieldKeys = array_keys($custom_fields);
-                    $fieldPairs = [];
-
-                    for ($i = 0; $i < count($fieldKeys); $i += 4) {
-                        $label1 = isset($fieldKeys[$i]) ? $fieldKeys[$i] : null;
-                        $value1 = isset($fieldKeys[$i + 1]) ? $fieldKeys[$i + 1] : null;
-                        $label2 = isset($fieldKeys[$i + 2]) ? $fieldKeys[$i + 2] : null;
-                        $value2 = isset($fieldKeys[$i + 3]) ? $fieldKeys[$i + 3] : null;
-
-                        if ($label1 && $value1) {
-                            $fieldPairs[] = [
-                                'label1' => $label1,
-                                'value1' => $value1,
-                                'label2' => $label2,
-                                'value2' => $value2
-                            ];
-                        }
-                    }
-
-                    // Custom field'ları organiza et (admin ile aynı formatta)
-                    $organizedFields = [];
-                    $maxRowNumber = 0;
-
-                    foreach ($fieldKeys as $key) {
-                        if (preg_match('/custom_(?:label|value|label2|value2)_(\d+)/', $key, $matches)) {
-                            $rowNum = intval($matches[1]);
-                            if ($rowNum > $maxRowNumber) {
-                                $maxRowNumber = $rowNum;
-                            }
-                        }
-                    }
-
-                    // Organize fields by row number
-                    for ($i = 1; $i <= $maxRowNumber; $i++) {
-                        $label1Key = "custom_label_$i";
-                        $value1Key = "custom_value_$i";
-                        $label2Key = "custom_label2_$i";
-                        $value2Key = "custom_value2_$i";
-
-                        if (isset($custom_fields[$label1Key]) && isset($custom_fields[$value1Key])) {
-                            $organizedFields[] = [
-                                'label1' => $label1Key,
-                                'value1' => $value1Key,
-                                'label2' => isset($custom_fields[$label2Key]) ? $label2Key : null,
-                                'value2' => isset($custom_fields[$value2Key]) ? $value2Key : null
-                            ];
-                        }
-                    }
-
-                                        // Ana grid container'ın içinde devam et
-                    if (!empty($organizedFields)) {
-                        // Section title ve ayırıcı gizlendi
-                        // Ek olarak başlığı ve çizgi görünmeyecek
-
-                        foreach ($organizedFields as $pair) {
-                            // Sol kolon
-                            echo '<div>';
-                            if (isset($custom_fields[$pair['label1']]) && isset($custom_fields[$pair['value1']])) {
-                                echo '<div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">';
-                                echo '<span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;">' . htmlspecialchars($custom_fields[$pair['label1']]) . ':</span>';
-                                echo '<span style="font-size: 9px;">';
-                                echo htmlspecialchars($custom_fields[$pair['value1']]);
-                                echo '</span>';
-                                echo '</div>';
-                            }
-                            echo '</div>';
-
-                            // Sağ kolon
-                            echo '<div>';
-                            if ($pair['label2'] && $pair['value2'] && isset($custom_fields[$pair['label2']]) && isset($custom_fields[$pair['value2']])) {
-                                echo '<div style="display: grid; grid-template-columns: auto 1fr; gap: 5px; align-items: center; margin-bottom: 6px; min-height: 18px;">';
-                                echo '<span style="font-weight: 600; color: #2c5aa0; font-size: 9px; white-space: nowrap;">' . htmlspecialchars($custom_fields[$pair['label2']]) . ':</span>';
-                                echo '<span style="font-size: 9px;">';
-                                echo htmlspecialchars($custom_fields[$pair['value2']]);
-                                echo '</span>';
-                                echo '</div>';
-                            }
-                            echo '</div>';
-                        }
-                    }
-                }
-            }
-            ?>
             </div>
         </div>
 
@@ -1040,204 +980,159 @@ function formatPriceWithCurrency($price, $currency) {
             <!-- Right Side - Information -->
             <div class="info-side">
 
-                <!-- Services Section -->
-                <div class="form-section" data-section="services">
-                    <div class="section-header">
-                        <div class="section-label"><?= $t['services'] ?></div>
-                        <div class="section-title"></div>
-                    </div>
-                    <div class="form-content">
-                        <?php
-                        // Önce quotes tablosundaki services_content'i kontrol et, yoksa template'den al
-                        $services_content = $quote['services_content'] ?? $quote['template_services_content'] ?? '';
-                        if (!empty($services_content)): ?>
-                            <!-- Hizmetler içeriği -->
-                            <?php
-                            // Şablon değişkenlerini değiştir
-                            $services_content = str_replace('{customer_name}', htmlspecialchars($quote['first_name'] . ' ' . $quote['last_name']), $services_content);
-                            $services_content = str_replace('{quote_number}', htmlspecialchars($quote['quote_number']), $services_content);
-                            $services_content = str_replace('{origin}', htmlspecialchars($quote['origin']), $services_content);
-                            $services_content = str_replace('{destination}', htmlspecialchars($quote['destination']), $services_content);
-                            $services_content = str_replace('{weight}', number_format($quote['weight'], 0, ',', '.'), $services_content);
-                            $services_content = str_replace('{volume}', number_format($quote['volume'] ?? 0, 2, ',', '.'), $services_content);
-                            $services_content = str_replace('{pieces}', $quote['pieces'] ?? $t['not_specified'], $services_content);
-                            $services_content = str_replace('{price}', formatPriceWithCurrency($quote['final_price'], $currency), $services_content);
-                            $services_content = str_replace('{valid_until}', (!empty($quote['valid_until']) && $quote['valid_until'] !== '0000-00-00') ? formatDate($quote['valid_until']) : $t['not_specified'], $services_content);
-                            $services_content = str_replace('{cargo_type}', $quote['cargo_type'] ?? 'Genel', $services_content);
-                            $services_content = str_replace('{trade_type}', $quote['trade_type'] ?? '', $services_content);
-                            $services_content = str_replace('{start_date}', $quote['start_date'] ? formatDate($quote['start_date']) : $t['not_specified'], $services_content);
-                            $services_content = str_replace('{delivery_date}', $quote['delivery_date'] ? formatDate($quote['delivery_date']) : $t['not_specified'], $services_content);
+        <?php
+        // PDF'de müşteri görünümüyle aynı şablon sırasına göre bölümleri render et
+        $custom_fields = [];
+        if (!empty($quote['custom_fields'])) {
+            $cf = json_decode($quote['custom_fields'], true);
+            if (is_array($cf)) { $custom_fields = $cf; }
+        }
 
-                            echo $services_content;
-                            ?>
+        $dynamic_sections = [];
+        if (!empty($quote['template_dynamic_sections'])) {
+            $dynamic_sections = json_decode($quote['template_dynamic_sections'], true) ?: [];
+        }
 
-                        <!-- Maliyet Listesi Linki -->
-                        <?php if (!empty($quote['cost_list_name'])): ?>
-                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
-                            <?php if (!empty($quote['cost_list_file_path']) && file_exists($quote['cost_list_file_path'])): ?>
-                                <p><?= $is_english ? 'You can download the detailed cost list' : 'Detaylı maliyet listesini' ?>
-                                   <a href="<?= htmlspecialchars($quote['cost_list_file_path']) ?>"
-                                      target="_blank"
-                                      style="color: #2c5aa0; text-decoration: underline; font-weight: 500;">
-                                      <?= $is_english ? 'from here' : 'buradan indirebilirsiniz' ?>
-                                   </a><?= $is_english ? '.' : '.' ?>
-                                </p>
-                            <?php else: ?>
-                                <p style="color: #666; font-style: italic;">
-                                    <?= $is_english ? 'Detailed cost list:' : 'Detaylı maliyet listesi:' ?>
-                                    <strong><?= htmlspecialchars($quote['cost_list_name']) ?></strong>
-                                    <?= $is_english ? ' (File not available)' : ' (Dosya mevcut değil)' ?>
-                                </p>
-                            <?php endif; ?>
-                        </div>
-                        <?php endif; ?>
-                        <?php endif; ?>
-                    </div>
-                </div>
+        $section_order = [];
+        if (!empty($quote['template_section_order'])) {
+            $section_order = json_decode($quote['template_section_order'], true) ?: [];
+        }
+        if (empty($section_order)) {
+            $section_order = ['services','transport','terms'];
+            // Şablonda tanımlı dinamik içerikler varsa sıraya ekle
+            foreach ($dynamic_sections as $k => $v) {
+                if (preg_match('/^dynamic_section_(\d+)_content$/', $k, $m)) {
+                    $section_order[] = 'dynamic_' . $m[1];
+                }
+            }
+        }
 
-                <!-- Transport Process -->
-                <div class="form-section" data-section="transport_process">
-                    <div class="section-header">
-                        <div class="section-label"><?= $is_english ? 'Transport Process' : 'Taşınma Süreci' ?></div>
-                        <div class="section-title"></div>
-                    </div>
-                    <div class="form-content">
-                        <?php
-                        // Önce veritabanından kaydedilmiş transport_process_text'i kontrol et
-                        if (!empty($quote['transport_process_text'])) {
-                            $transport_process_text = $quote['transport_process_text'];
+        foreach ($section_order as $secKey) {
+            if ($secKey === 'services') {
+                // Başlık önceliği: template -> çeviri
+                $services_label = !empty($quote['template_services_title']) ? $quote['template_services_title'] : $t['services'];
+                echo '<div class="form-section" data-section="services">';
+                echo '  <div class="section-header">';
+                echo '    <div class="section-label">' . htmlspecialchars($services_label) . '</div>';
+                echo '    <div class="section-title"></div>';
+                echo '  </div>';
+                echo '  <div class="form-content">';
+                // İçerik: quote override -> template
+                $services_content = $quote['services_content'] ?? $quote['template_services_content'] ?? '';
+                if (!empty($services_content)) {
+                    $services_content = str_replace('{customer_name}', htmlspecialchars($quote['first_name'] . ' ' . $quote['last_name']), $services_content);
+                    $services_content = str_replace('{quote_number}', htmlspecialchars($quote['quote_number']), $services_content);
+                    $services_content = str_replace('{origin}', htmlspecialchars($quote['origin']), $services_content);
+                    $services_content = str_replace('{destination}', htmlspecialchars($quote['destination']), $services_content);
+                    $services_content = str_replace('{weight}', number_format($quote['weight'], 0, ',', '.'), $services_content);
+                    $services_content = str_replace('{volume}', number_format($quote['volume'] ?? 0, 2, ',', '.'), $services_content);
+                    $services_content = str_replace('{pieces}', $quote['pieces'] ?? $t['not_specified'], $services_content);
+                    $services_content = str_replace('{price}', formatPriceWithCurrency($quote['final_price'], $currency), $services_content);
+                    $services_content = str_replace('{valid_until}', (!empty($quote['valid_until']) && $quote['valid_until'] !== '0000-00-00') ? formatDate($quote['valid_until']) : $t['not_specified'], $services_content);
+                    $services_content = str_replace('{cargo_type}', $quote['cargo_type'] ?? 'Genel', $services_content);
+                    $services_content = str_replace('{trade_type}', $quote['trade_type'] ?? '', $services_content);
+                    $services_content = str_replace('{start_date}', $quote['start_date'] ? formatDate($quote['start_date']) : $t['not_specified'], $services_content);
+                    $services_content = str_replace('{delivery_date}', $quote['delivery_date'] ? formatDate($quote['delivery_date']) : $t['not_specified'], $services_content);
+                    echo $services_content;
+                }
+                // Maliyet listesi linki
+                if (!empty($quote['cost_list_name'])) {
+                    echo '<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">';
+                    if (!empty($quote['cost_list_file_path']) && file_exists($quote['cost_list_file_path'])) {
+                        echo '<p>' . ($is_english ? 'You can download the detailed cost list' : 'Detaylı maliyet listesini') . ' <a href="' . htmlspecialchars($quote['cost_list_file_path']) . '" target="_blank" style="color: #2c5aa0; text-decoration: underline; font-weight: 500;">' . ($is_english ? 'from here' : 'buradan indirebilirsiniz') . '</a>' . ($is_english ? '.' : '.') . '</p>';
+                    } else {
+                        echo '<p style="color: #666; font-style: italic;">' . ($is_english ? 'Detailed cost list:' : 'Detaylı maliyet listesi:') . ' <strong>' . htmlspecialchars($quote['cost_list_name']) . '</strong> ' . ($is_english ? ' (File not available)' : ' (Dosya mevcut değil)') . '</p>';
+                    }
+                    echo '</div>';
+                }
+                echo '  </div>';
+                echo '</div>';
+            } elseif ($secKey === 'transport' || $secKey === 'transport_process') {
+                $trans_label = !empty($quote['template_transport_process_title']) ? $quote['template_transport_process_title'] : ($is_english ? 'Transport Process' : 'Taşınma Süreci');
+                echo '<div class="form-section" data-section="transport_process">';
+                echo '  <div class="section-header">';
+                echo '    <div class="section-label">' . htmlspecialchars($trans_label) . '</div>';
+                echo '    <div class="section-title"></div>';
+                echo '  </div>';
+                echo '  <div class="form-content">';
+                // İçerik önceliği: quote override -> template -> varsayılan
+                if (!empty($quote['transport_process_text'])) {
+                    $transport_process_text = $quote['transport_process_text'];
+                } elseif (!empty($quote['template_transport_process_content'])) {
+                    $transport_process_text = $quote['template_transport_process_content'];
+                } else {
+                    $transport_process_text = '';
+                    $transport_mode_lower = strtolower($quote['transport_name']);
+                    if ($is_english) {
+                        if (strpos($transport_mode_lower, 'karayolu') !== false) {
+                            $transport_process_text = "1-Presentation and mutual signing of the offer,<br>2-Making a 20% down payment of the offer price to the company account and making a definitive registration in our operation program,<br>3-Preparation of customs documents,<br>4-Collection of goods from the loading address,<br>5-Customs clearance of the goods and departure,<br>6-Payment of the remaining balance,<br>7-Customs clearance procedures in the destination country,<br>8-Delivery of goods to the delivery address.";
+                        } elseif (strpos($transport_mode_lower, 'deniz') !== false) {
+                            $transport_process_text = "1-Presentation and mutual signing of the offer,<br>2-Making a 20% down payment of the offer price to the company account and making a definitive registration in our operation program,<br>3-Container reservation from the shipping company,<br>4-Preparation of customs documents,<br>5-Collection of goods from the loading address,<br>6-Customs clearance of the goods and departure,<br>7-Payment of the remaining balance,<br>8-Customs clearance procedures in the destination country,<br>9-Delivery of goods to the delivery address.";
+                        } elseif (strpos($transport_mode_lower, 'hava') !== false) {
+                            $transport_process_text = "1-Presentation and mutual signing of the offer,<br>2-Making a 20% down payment of the offer price to the company account and making a definitive registration in our operation program,<br>3-Cargo reservation from the airline company,<br>4-Preparation of customs documents,<br>5-Collection of goods from the loading address,<br>6-Customs clearance of the goods and departure,<br>7-Payment of the remaining balance,<br>8-Customs clearance procedures in the destination country,<br>9-Delivery of goods to the delivery address.";
                         } else {
-                            // Eğer veritabanında kayıtlı değer yoksa, taşıma moduna göre varsayılan süreç metni belirle
-                            $transport_process_text = '';
-                            $transport_mode_lower = strtolower($quote['transport_name']);
-
-                            if ($is_english) {
-                                // İngilizce süreç metinleri
-                                if (strpos($transport_mode_lower, 'karayolu') !== false) {
-                                    $transport_process_text = "1-Presentation and mutual signing of the offer,<br>
-2-Making a 20% down payment of the offer price to the company account and making a definitive registration in our operation program,<br>
-3-Preparation of customs documents,<br>
-4-Collection of goods from the loading address,<br>
-5-Customs clearance of the goods and departure,<br>
-6-Payment of the remaining balance,<br>
-7-Customs clearance procedures in the destination country,<br>
-8-Delivery of goods to the delivery address.";
-                                } elseif (strpos($transport_mode_lower, 'deniz') !== false) {
-                                    $transport_process_text = "1-Presentation and mutual signing of the offer,<br>
-2-Making a 20% down payment of the offer price to the company account and making a definitive registration in our operation program,<br>
-3-Container reservation from the shipping company,<br>
-4-Preparation of customs documents,<br>
-5-Collection of goods from the loading address,<br>
-6-Customs clearance of the goods and departure,<br>
-7-Payment of the remaining balance,<br>
-8-Customs clearance procedures in the destination country,<br>
-9-Delivery of goods to the delivery address.";
-                                } elseif (strpos($transport_mode_lower, 'hava') !== false) {
-                                    $transport_process_text = "1-Presentation and mutual signing of the offer,<br>
-2-Making a 20% down payment of the offer price to the company account and making a definitive registration in our operation program,<br>
-3-Cargo reservation from the airline company,<br>
-4-Preparation of customs documents,<br>
-5-Collection of goods from the loading address,<br>
-6-Customs clearance of the goods and departure,<br>
-7-Payment of the remaining balance,<br>
-8-Customs clearance procedures in the destination country,<br>
-9-Delivery of goods to the delivery address.";
-                                } else {
-                                    // Varsayılan karayolu süreci
-                                    $transport_process_text = "1-Presentation and mutual signing of the offer,<br>
-2-Making a 20% down payment of the offer price to the company account and making a definitive registration in our operation program,<br>
-3-Preparation of customs documents,<br>
-4-Collection of goods from the loading address,<br>
-5-Customs clearance of the goods and departure,<br>
-6-Payment of the remaining balance,<br>
-7-Customs clearance procedures in the destination country,<br>
-8-Delivery of goods to the delivery address.";
-                                }
-                            } else {
-                                // Türkçe süreç metinleri
-                                if (strpos($transport_mode_lower, 'karayolu') !== false) {
-                                    $transport_process_text = "1-Teklif sunulması ve karşılıklı imzalanması,<br>
-2-Şirket hesabına teklif fiyatındaki tutarın %20 si oranında ön ödeme yapılması ve operasyon programımıza kesin kayıt yapılması,<br>
-3-Gümrük evraklarının hazırlanması,<br>
-4-Eşyaların yükleme adresinden alınması,<br>
-5-Eşyanın gümrük işlemlerinin yapılarak yola çıkartılması,<br>
-6-Kalan bakiye ödemesinin yapılması,<br>
-7-Varış ülke gümrük açılım işlemlerinin yapılması,<br>
-8-Eşyanın teslimat adresine teslimi şeklindedir.";
-                                } elseif (strpos($transport_mode_lower, 'deniz') !== false) {
-                                    $transport_process_text = "1-Teklif sunulması ve karşılıklı imzalanması,<br>
-2-Şirket hesabına teklif fiyatındaki tutarın %20 si oranında ön ödeme yapılması ve operasyon programımıza kesin kayıt yapılması,<br>
-3-Gemi firmasından konteynır rezervasyonunun yapılması,<br>
-4-Gümrük evraklarının hazırlanması,<br>
-5-Eşyaların yükleme adresinden alınması,<br>
-6-Eşyanın gümrük işlemlerinin yapılarak yola çıkartılması,<br>
-7-Kalan bakiye ödemesinin yapılması,<br>
-8-Varış ülke gümrük açılım işlemlerinin yapılması,<br>
-9-Eşyanın teslimat adresine teslimi şeklindedir.";
-                                } elseif (strpos($transport_mode_lower, 'hava') !== false) {
-                                    $transport_process_text = "1-Teklif sunulması ve karşılıklı imzalanması,<br>
-2-Şirket hesabına teklif fiyatındaki tutarın %20 si oranında ön ödeme yapılması ve operasyon programımıza kesin kayıt yapılması,<br>
-3-Havayolu şirketinden kargo rezervasyonunun yapılması,<br>
-4-Gümrük evraklarının hazırlanması,<br>
-5-Eşyaların yükleme adresinden alınması,<br>
-6-Eşyanın gümrük işlemlerinin yapılarak yola çıkartılması,<br>
-7-Kalan bakiye ödemesinin yapılması,<br>
-8-Varış ülke gümrük açılım işlemlerinin yapılması,<br>
-9-Eşyanın teslimat adresine teslimi şeklindedir.";
-                                } else {
-                                    // Varsayılan karayolu süreci
-                                    $transport_process_text = "1-Teklif sunulması ve karşılıklı imzalanması,<br>
-2-Şirket hesabına teklif fiyatındaki tutarın %20 si oranında ön ödeme yapılması ve operasyon programımıza kesin kayıt yapılması,<br>
-3-Gümrük evraklarının hazırlanması,<br>
-4-Eşyaların yükleme adresinden alınması,<br>
-5-Eşyanın gümrük işlemlerinin yapılarak yola çıkartılması,<br>
-6-Kalan bakiye ödemesinin yapılması,<br>
-7-Varış ülke gümrük açılım işlemlerinin yapılması,<br>
-8-Eşyanın teslimat adresine teslimi şeklindedir.";
-                                }
-                            }
+                            $transport_process_text = "1-Presentation and mutual signing of the offer,<br>2-Making a 20% down payment of the offer price to the company account and making a definitive registration in our operation program,<br>3-Preparation of customs documents,<br>4-Collection of goods from the loading address,<br>5-Customs clearance of the goods and departure,<br>6-Payment of the remaining balance,<br>7-Customs clearance procedures in the destination country,<br>8-Delivery of goods to the delivery address.";
                         }
-                        ?>
-
-                        <div class="transport-process-content">
-                            <p><?php echo $transport_process_text; ?></p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Terms Section -->
-                <div class="form-section" data-section="terms">
-                    <div class="section-header">
-                        <div class="section-label"><?= $t['terms'] ?></div>
-                        <div class="section-title"></div>
-                    </div>
-                    <div class="form-content">
-                        <?php
-                        // Önce quotes tablosundaki terms_content'i kontrol et, yoksa template'den al
-                        $terms_content = $quote['terms_content'] ?? $quote['template_terms_content'] ?? '';
-                        if (!empty($terms_content)): ?>
-                            <!-- Şartlar içeriği -->
-                            <?php
-                            // Şablon değişkenlerini değiştir
-                            $terms_content = str_replace('{customer_name}', htmlspecialchars($quote['first_name'] . ' ' . $quote['last_name']), $terms_content);
-                            $terms_content = str_replace('{quote_number}', htmlspecialchars($quote['quote_number']), $terms_content);
-                            $terms_content = str_replace('{origin}', htmlspecialchars($quote['origin']), $terms_content);
-                            $terms_content = str_replace('{destination}', htmlspecialchars($quote['destination']), $terms_content);
-                            $terms_content = str_replace('{weight}', number_format($quote['weight'], 0, ',', '.'), $terms_content);
-                            $terms_content = str_replace('{volume}', number_format($quote['volume'] ?? 0, 2, ',', '.'), $terms_content);
-                            $terms_content = str_replace('{pieces}', $quote['pieces'] ?? $t['not_specified'], $terms_content);
-                            $terms_content = str_replace('{price}', formatPriceWithCurrency($quote['final_price'], $currency), $terms_content);
-                            $terms_content = str_replace('{valid_until}', (!empty($quote['valid_until']) && $quote['valid_until'] !== '0000-00-00') ? formatDate($quote['valid_until']) : $t['not_specified'], $terms_content);
-                            $terms_content = str_replace('{cargo_type}', $quote['cargo_type'] ?? 'Genel', $terms_content);
-                            $terms_content = str_replace('{trade_type}', $quote['trade_type'] ?? '', $terms_content);
-                            $terms_content = str_replace('{start_date}', $quote['start_date'] ? formatDate($quote['start_date']) : $t['not_specified'], $terms_content);
-                            $terms_content = str_replace('{delivery_date}', $quote['delivery_date'] ? formatDate($quote['delivery_date']) : $t['not_specified'], $terms_content);
-
-                            echo $terms_content;
-                            ?>
-                        <?php endif; ?>
-                    </div>
-                </div>
+                    } else {
+                        if (strpos($transport_mode_lower, 'karayolu') !== false) {
+                            $transport_process_text = "1-Teklif sunulması ve karşılıklı imzalanması,<br>2-Şirket hesabına teklif fiyatındaki tutarın %20 si oranında ön ödeme yapılması ve operasyon programımıza kesin kayıt yapılması,<br>3-Gümrük evraklarının hazırlanması,<br>4-Eşyaların yükleme adresinden alınması,<br>5-Eşyanın gümrük işlemlerinin yapılarak yola çıkartılması,<br>6-Kalan bakiye ödemesinin yapılması,<br>7-Varış ülke gümrük açılım işlemlerinin yapılması,<br>8-Eşyanın teslimat adresine teslimi şeklindedir.";
+                        } elseif (strpos($transport_mode_lower, 'deniz') !== false) {
+                            $transport_process_text = "1-Teklif sunulması ve karşılıklı imzalanması,<br>2-Şirket hesabına teklif fiyatındaki tutarın %20 si oranında ön ödeme yapılması ve operasyon programımıza kesin kayıt yapılması,<br>3-Gemi firmasından konteynır rezervasyonunun yapılması,<br>4-Gümrük evraklarının hazırlanması,<br>5-Eşyaların yükleme adresinden alınması,<br>6-Eşyanın gümrük işlemlerinin yapılarak yola çıkartılması,<br>7-Kalan bakiye ödemesinin yapılması,<br>8-Varış ülke gümrük açılım işlemlerinin yapılması,<br>9-Eşyanın teslimat adresine teslimi şeklindedir.";
+                        } elseif (strpos($transport_mode_lower, 'hava') !== false) {
+                            $transport_process_text = "1-Teklif sunulması ve karşılıklı imzalanması,<br>2-Şirket hesabına teklif fiyatındaki tutarın %20 si oranında ön ödeme yapılması ve operasyon programımıza kesin kayıt yapılması,<br>3-Havayolu şirketinden kargo rezervasyonunun yapılması,<br>4-Gümrük evraklarının hazırlanması,<br>5-Eşyaların yükleme adresinden alınması,<br>6-Eşyanın gümrük işlemlerinin yapılarak yola çıkartılması,<br>7-Kalan bakiye ödemesinin yapılması,<br>8-Varış ülke gümrük açılım işlemlerinin yapılması,<br>9-Eşyanın teslimat adresine teslimi şeklindedir.";
+                        } else {
+                            $transport_process_text = "1-Teklif sunulması ve karşılıklı imzalanması,<br>2-Şirket hesabına teklif fiyatındaki tutarın %20 si oranında ön ödeme yapılması ve operasyon programımıza kesin kayıt yapılması,<br>3-Gümrük evraklarının hazırlanması,<br>4-Eşyaların yükleme adresinden alınması,<br>5-Eşyanın gümrük işlemlerinin yapılarak yola çıkartılması,<br>6-Kalan bakiye ödemesinin yapılması,<br>7-Varış ülke gümrük açılım işlemlerinin yapılması,<br>8-Eşyanın teslimat adresine teslimi şeklindedir.";
+                        }
+                    }
+                }
+                echo '<div class="transport-process-content"><p>' . $transport_process_text . '</p></div>';
+                echo '  </div>';
+                echo '</div>';
+            } elseif ($secKey === 'terms') {
+                $terms_label = !empty($quote['template_terms_title']) ? $quote['template_terms_title'] : $t['terms'];
+                echo '<div class="form-section" data-section="terms">';
+                echo '  <div class="section-header">';
+                echo '    <div class="section-label">' . htmlspecialchars($terms_label) . '</div>';
+                echo '    <div class="section-title"></div>';
+                echo '  </div>';
+                echo '  <div class="form-content">';
+                $terms_content = $quote['terms_content'] ?? $quote['template_terms_content'] ?? '';
+                if (!empty($terms_content)) {
+                    $terms_content = str_replace('{customer_name}', htmlspecialchars($quote['first_name'] . ' ' . $quote['last_name']), $terms_content);
+                    $terms_content = str_replace('{quote_number}', htmlspecialchars($quote['quote_number']), $terms_content);
+                    $terms_content = str_replace('{origin}', htmlspecialchars($quote['origin']), $terms_content);
+                    $terms_content = str_replace('{destination}', htmlspecialchars($quote['destination']), $terms_content);
+                    $terms_content = str_replace('{weight}', number_format($quote['weight'], 0, ',', '.'), $terms_content);
+                    $terms_content = str_replace('{volume}', number_format($quote['volume'] ?? 0, 2, ',', '.'), $terms_content);
+                    $terms_content = str_replace('{pieces}', $quote['pieces'] ?? $t['not_specified'], $terms_content);
+                    $terms_content = str_replace('{price}', formatPriceWithCurrency($quote['final_price'], $currency), $terms_content);
+                    $terms_content = str_replace('{valid_until}', (!empty($quote['valid_until']) && $quote['valid_until'] !== '0000-00-00') ? formatDate($quote['valid_until']) : $t['not_specified'], $terms_content);
+                    $terms_content = str_replace('{cargo_type}', $quote['cargo_type'] ?? 'Genel', $terms_content);
+                    $terms_content = str_replace('{trade_type}', $quote['trade_type'] ?? '', $terms_content);
+                    $terms_content = str_replace('{start_date}', $quote['start_date'] ? formatDate($quote['start_date']) : $t['not_specified'], $terms_content);
+                    $terms_content = str_replace('{delivery_date}', $quote['delivery_date'] ? formatDate($quote['delivery_date']) : $t['not_specified'], $terms_content);
+                    echo $terms_content;
+                }
+                echo '  </div>';
+                echo '</div>';
+            } elseif (strpos($secKey, 'dynamic_') === 0) {
+                $idPart = substr($secKey, strlen('dynamic_'));
+                $titleKey = 'dynamic_section_' . $idPart . '_title';
+                $contentKey = 'dynamic_section_' . $idPart . '_content';
+                $title = $custom_fields[$titleKey] ?? ($dynamic_sections[$titleKey] ?? '');
+                $content = $custom_fields[$contentKey] ?? ($dynamic_sections[$contentKey] ?? '');
+                if (!empty($content)) {
+                    echo '<div class="form-section" data-section="' . htmlspecialchars($secKey) . '">';
+                    echo '  <div class="section-header">';
+                    echo '    <div class="section-label">' . (!empty($title) ? htmlspecialchars($title) : '<span style="color:#666">Yeni Bölüm</span>') . '</div>';
+                    echo '    <div class="section-title"></div>';
+                    echo '  </div>';
+                    echo '  <div class="form-content">' . $content . '</div>';
+                    echo '</div>';
+                }
+            }
+        }
+        ?>
 
                 <!-- Additional Section 1 -->
                 <?php if (!empty($quote['additional_section1_title']) || !empty($quote['additional_section1_content'])): ?>

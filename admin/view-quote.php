@@ -2051,17 +2051,28 @@ function formatPriceWithCurrency($price, $currency) {
                             </span>
                         </div>
                         <?php endif; ?>
+                    </div>
+                    </div>
+                    <!-- Ana 2 kolonlu grid burada kapandı -->
 
-                        <!-- Custom Field'lar buraya dinamik olarak eklenecek -->
-                        <div id="additionalGeneralInfoRows" style="display: contents;">
-                            <!-- Dinamik olarak eklenen satırlar buraya gelecek -->
+                    <!-- Custom Field'lar - Tam Genişlik (Grid dışında) -->
+                    <div id="customFieldsGrid" style="display: flex; gap: 30px; padding: 15px 20px; background: #f8f9fa; border-top: 1px solid #e0e0e0;">
+                        <!-- Sol Kolon -->
+                        <div id="customFieldsLeft" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                        </div>
+                        <!-- Sağ Kolon -->
+                        <div id="customFieldsRight" style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
                         </div>
                     </div>
 
-                    <!-- Yeni Satır Ekle Butonu -->
-                    <div style="background: white; padding: 15px 20px; border-top: 1px solid #eee;">
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addGeneralInfoRow()" style="font-size: 12px;">
-                            <i class="fas fa-plus"></i> Yeni Satır Ekle
+                    <!-- Yeni Alan Ekle Butonları - Tam Genişlik -->
+                    <div style="background: #f0f4f8; padding: 12px 20px; border-top: 1px solid #dee2e6; display: flex; gap: 10px; align-items: center; justify-content: center;">
+                        <span style="font-size: 12px; color: #666; margin-right: 5px;">Alan Ekle:</span>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addCustomFieldToColumn('left')" style="font-size: 12px;">
+                            <i class="fas fa-plus"></i> Sol Kolona
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="addCustomFieldToColumn('right')" style="font-size: 12px;">
+                            <i class="fas fa-plus"></i> Sağ Kolona
                         </button>
                     </div>
                 </div>
@@ -4315,13 +4326,19 @@ function formatPriceWithCurrency($price, $currency) {
                 $custom_fields = !empty($quote['custom_fields']) ? json_decode($quote['custom_fields'], true) : [];
                 echo json_encode($custom_fields);
             ?>;
+            const customFieldsOrder = <?php
+                $custom_fields_order = !empty($quote['custom_fields_order']) ? json_decode($quote['custom_fields_order'], true) : [];
+                echo json_encode($custom_fields_order);
+            ?>;
 
             if (customFields && typeof customFields === 'object') {
-                const container = document.getElementById('additionalGeneralInfoRows');
-                if (!container) return;
+                const leftContainer = document.getElementById('customFieldsLeft');
+                const rightContainer = document.getElementById('customFieldsRight');
+                if (!leftContainer || !rightContainer) return;
 
-                // Custom field'ları newfield_ formatında olan alanları gruplayalım
-                const fieldPairs = [];
+                // Custom field'ları organize et
+                const leftFields = [];
+                const rightFields = [];
                 const fieldKeys = Object.keys(customFields);
 
                 // Önce maksimum row numarasını bulalım
@@ -4336,20 +4353,33 @@ function formatPriceWithCurrency($price, $currency) {
                     }
                 });
 
-                // Row'ları organize et
+                // Sol ve sağ alanları ayır
                 for (let i = 1; i <= maxRowNumber; i++) {
+                    // Sol kolon alanları
                     const label1Key = `custom_label_${i}`;
                     const value1Key = `custom_value_${i}`;
+                    if (customFields[label1Key] && customFields[value1Key]) {
+                        leftFields.push({
+                            id: i,
+                            labelKey: label1Key,
+                            valueKey: value1Key,
+                            label: customFields[label1Key],
+                            value: customFields[value1Key],
+                            position: 'left'
+                        });
+                    }
+                    
+                    // Sağ kolon alanları
                     const label2Key = `custom_label2_${i}`;
                     const value2Key = `custom_value2_${i}`;
-
-                    if (customFields[label1Key] && customFields[value1Key]) {
-                        fieldPairs.push({
-                            rowNumber: i,
-                            label1: label1Key,
-                            value1: value1Key,
-                            label2: customFields[label2Key] ? label2Key : null,
-                            value2: customFields[value2Key] ? value2Key : null
+                    if (customFields[label2Key] && customFields[value2Key]) {
+                        rightFields.push({
+                            id: i,
+                            labelKey: label2Key,
+                            valueKey: value2Key,
+                            label: customFields[label2Key],
+                            value: customFields[value2Key],
+                            position: 'right'
                         });
                     }
                 }
@@ -4357,64 +4387,218 @@ function formatPriceWithCurrency($price, $currency) {
                 // generalInfoRowCounter'ı güncelle
                 generalInfoRowCounter = maxRowNumber;
 
-                if (fieldPairs.length > 0) {
-                    // Separator'ın kaldırılıp kaldırılmadığını kontrol et
-                    const isHidden = localStorage.getItem(`quote_custom_separator_hidden_${quoteId}`) === 'true';
+                // Sol alanları render et
+                leftFields.forEach(field => {
+                    leftContainer.insertAdjacentHTML('beforeend', createFieldHtml(field, quoteId));
+                });
 
-                    if (!isHidden) {
-                    // Ayırıcı başlık ve çizgi gizlendi
-                    // Separator görünmeyecek
-                    }
-                }
-
-                fieldPairs.forEach(pair => {
-                    const rowNumber = pair.rowNumber;
-
-                    const rowHtml = `
-                        <!-- Sol Kolon -->
-                        <div id="leftColumn_${rowNumber}">
-                            <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span class="editable" data-field="${pair.label1}" data-quote-id="${quoteId}" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap; min-width: 100px;"
-                                      onclick="editField(this)" title="Etiket düzenlemek için tıklayın">
-                                    ${customFields[pair.label1]}
-                                    <span class="edit-indicator"></span>
-                                </span>
-                                <span class="editable" data-field="${pair.value1}" data-quote-id="${quoteId}" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right;"
-                                      onclick="editField(this)" title="Değer düzenlemek için tıklayın">
-                                    ${customFields[pair.value1]}
-                                    <span class="edit-indicator"></span>
-                                </span>
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeGeneralInfoField('left', ${rowNumber})" style="font-size: 11px; padding: 2px 6px;" title="Bu alanı kaldır">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Sağ Kolon -->
-                        <div id="rightColumn_${rowNumber}">
-                            ${pair.label2 && pair.value2 ? `
-                            <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                                <span class="editable" data-field="${pair.label2}" data-quote-id="${quoteId}" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap; min-width: 100px;"
-                                      onclick="editField(this)" title="Etiket düzenlemek için tıklayın">
-                                    ${customFields[pair.label2]}
-                                    <span class="edit-indicator"></span>
-                                </span>
-                                <span class="editable" data-field="${pair.value2}" data-quote-id="${quoteId}" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right;"
-                                      onclick="editField(this)" title="Değer düzenlemek için tıklayın">
-                                    ${customFields[pair.value2]}
-                                    <span class="edit-indicator"></span>
-                                </span>
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeGeneralInfoField('right', ${rowNumber})" style="font-size: 11px; padding: 2px 6px;" title="Bu alanı kaldır">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                            ` : ''}
-                        </div>
-                    `;
-
-                    container.insertAdjacentHTML('beforeend', rowHtml);
+                // Sağ alanları render et
+                rightFields.forEach(field => {
+                    rightContainer.insertAdjacentHTML('beforeend', createFieldHtml(field, quoteId));
                 });
             }
+        }
+
+        // Tek bir custom field HTML'i oluştur
+        function createFieldHtml(field, quoteId) {
+            const isLeft = field.position === 'left';
+            const moveIcon = isLeft ? 'fa-arrow-right' : 'fa-arrow-left';
+            const moveTitle = isLeft ? 'Sağ kolona taşı' : 'Sol kolona taşı';
+            const moveDirection = isLeft ? 'right' : 'left';
+            
+            return `
+                <div class="custom-field-item" data-field-id="${field.id}" data-position="${field.position}" 
+                     style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; margin-bottom: 6px; 
+                            background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%); 
+                            border: 1px solid #e0e0e0; border-radius: 8px; 
+                            box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s ease;">
+                    
+                    <button type="button" class="btn btn-sm move-field-btn" 
+                            onclick="moveFieldToColumn(${field.id}, '${moveDirection}')" 
+                            title="${moveTitle}"
+                            style="width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center;
+                                   background: ${isLeft ? '#e3f2fd' : '#fff3e0'}; border: 1px solid ${isLeft ? '#90caf9' : '#ffcc80'}; 
+                                   border-radius: 6px; color: ${isLeft ? '#1976d2' : '#f57c00'}; transition: all 0.2s;">
+                        <i class="fas ${moveIcon}" style="font-size: 11px;"></i>
+                    </button>
+                    
+                    <div style="flex: 1; display: flex; align-items: center; gap: 8px;">
+                        <span class="editable field-label" data-field="${field.labelKey}" data-quote-id="${quoteId}" 
+                              style="cursor: pointer; padding: 4px 8px; border-radius: 4px; 
+                                     font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;
+                                     background: rgba(44, 90, 160, 0.08); transition: background 0.2s;"
+                              onclick="editField(this)" title="Etiket düzenlemek için tıklayın">
+                            ${field.label}
+                            <span class="edit-indicator"></span>
+                        </span>
+                        <span class="editable field-value" data-field="${field.valueKey}" data-quote-id="${quoteId}" 
+                              style="cursor: pointer; padding: 4px 8px; border-radius: 4px; flex: 1;
+                                     text-align: right; color: #333; font-size: 13px; transition: background 0.2s;"
+                              onclick="editField(this)" title="Değer düzenlemek için tıklayın">
+                            ${field.value}
+                            <span class="edit-indicator"></span>
+                        </span>
+                    </div>
+                    
+                    <button type="button" class="btn btn-sm" 
+                            onclick="removeCustomField(${field.id}, '${field.position}')" 
+                            title="Bu alanı kaldır"
+                            style="width: 26px; height: 26px; padding: 0; display: flex; align-items: center; justify-content: center;
+                                   background: #ffebee; border: 1px solid #ffcdd2; border-radius: 6px; color: #c62828; transition: all 0.2s;">
+                        <i class="fas fa-times" style="font-size: 10px;"></i>
+                    </button>
+                </div>
+            `;
+        }
+
+        // Alanı diğer kolona taşı
+        function moveFieldToColumn(fieldId, targetPosition) {
+            const quoteId = '<?php echo $quote['quote_number']; ?>';
+            const sourcePosition = targetPosition === 'left' ? 'right' : 'left';
+            
+            // Kaynak ve hedef key'leri belirle
+            let sourceLabelKey, sourceValueKey, targetLabelKey, targetValueKey;
+            
+            if (sourcePosition === 'left') {
+                sourceLabelKey = `custom_label_${fieldId}`;
+                sourceValueKey = `custom_value_${fieldId}`;
+                targetLabelKey = `custom_label2_${fieldId}`;
+                targetValueKey = `custom_value2_${fieldId}`;
+            } else {
+                sourceLabelKey = `custom_label2_${fieldId}`;
+                sourceValueKey = `custom_value2_${fieldId}`;
+                targetLabelKey = `custom_label_${fieldId}`;
+                targetValueKey = `custom_value_${fieldId}`;
+            }
+            
+            // DOM'dan mevcut değerleri al
+            const fieldItem = document.querySelector(`.custom-field-item[data-field-id="${fieldId}"][data-position="${sourcePosition}"]`);
+            if (!fieldItem) return;
+            
+            const labelEl = fieldItem.querySelector('.field-label');
+            const valueEl = fieldItem.querySelector('.field-value');
+            if (!labelEl || !valueEl) return;
+            
+            const labelText = labelEl.textContent.trim().replace(/\s*$/, '');
+            const valueText = valueEl.textContent.trim().replace(/\s*$/, '');
+            
+            // Yeni field objesi oluştur
+            const newField = {
+                id: fieldId,
+                labelKey: targetLabelKey,
+                valueKey: targetValueKey,
+                label: labelText,
+                value: valueText,
+                position: targetPosition
+            };
+            
+            // Hedef container'a ekle
+            const targetContainer = document.getElementById(targetPosition === 'left' ? 'customFieldsLeft' : 'customFieldsRight');
+            if (targetContainer) {
+                targetContainer.insertAdjacentHTML('beforeend', createFieldHtml(newField, quoteId));
+            }
+            
+            // Kaynak field'ı DOM'dan kaldır
+            fieldItem.remove();
+            
+            // Veritabanını güncelle - önce hedef key'leri kaydet
+            Promise.all([
+                fetch('../api/update-general-info.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        ajax: '1',
+                        action: 'update_field',
+                        field: targetLabelKey,
+                        value: labelText,
+                        quote_number: quoteId
+                    })
+                }),
+                fetch('../api/update-general-info.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        ajax: '1',
+                        action: 'update_field',
+                        field: targetValueKey,
+                        value: valueText,
+                        quote_number: quoteId
+                    })
+                }),
+                // Kaynak key'leri sil
+                fetch('../api/update-general-info.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        ajax: '1',
+                        action: 'remove_custom_field',
+                        field: sourceLabelKey,
+                        quote_number: quoteId
+                    })
+                }),
+                fetch('../api/update-general-info.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        ajax: '1',
+                        action: 'remove_custom_field',
+                        field: sourceValueKey,
+                        quote_number: quoteId
+                    })
+                })
+            ]).then(() => {
+                showAlert(targetPosition === 'left' ? 'Alan sola taşındı' : 'Alan sağa taşındı', 'success');
+            }).catch(error => {
+                console.error('Taşıma hatası:', error);
+                showAlert('Alan taşınamadı', 'error');
+            });
+        }
+        
+        // Custom field sil
+        function removeCustomField(fieldId, position) {
+            if (!confirm('Bu alanı silmek istediğinizden emin misiniz?')) return;
+            
+            const quoteId = '<?php echo $quote['quote_number']; ?>';
+            const fieldItem = document.querySelector(`.custom-field-item[data-field-id="${fieldId}"][data-position="${position}"]`);
+            if (!fieldItem) return;
+            
+            let labelKey, valueKey;
+            if (position === 'left') {
+                labelKey = `custom_label_${fieldId}`;
+                valueKey = `custom_value_${fieldId}`;
+            } else {
+                labelKey = `custom_label2_${fieldId}`;
+                valueKey = `custom_value2_${fieldId}`;
+            }
+            
+            // DOM'dan kaldır
+            fieldItem.remove();
+            
+            // Veritabanından sil
+            Promise.all([
+                fetch('../api/update-general-info.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        ajax: '1',
+                        action: 'remove_custom_field',
+                        field: labelKey,
+                        quote_number: quoteId
+                    })
+                }),
+                fetch('../api/update-general-info.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        ajax: '1',
+                        action: 'remove_custom_field',
+                        field: valueKey,
+                        quote_number: quoteId
+                    })
+                })
+            ]).then(() => {
+                showAlert('Alan silindi', 'success');
+            });
         }
 
         // Custom separator kaldırma fonksiyonu
@@ -4633,241 +4817,69 @@ function formatPriceWithCurrency($price, $currency) {
             initSectionOrdering();
         });
 
-        function addGeneralInfoRow() {
+        // Belirli bir kolona yeni alan ekle
+        function addCustomFieldToColumn(position) {
             generalInfoRowCounter++;
-            const container = document.getElementById('additionalGeneralInfoRows');
-
+            const quoteId = '<?php echo $quote['quote_number']; ?>';
+            const container = document.getElementById(position === 'left' ? 'customFieldsLeft' : 'customFieldsRight');
+            
             if (!container) {
-                console.error('additionalGeneralInfoRows container bulunamadı');
+                console.error('Container bulunamadı');
                 return;
             }
 
-            // Eğer bu ilk custom field ise ayırıcı ekle
-            const existingCustomFields = container.querySelectorAll('[id^="leftColumn_"], [id^="rightColumn_"]');
-            const hasSeparator = container.querySelector('[data-separator="custom-fields"]');
-
-            if (existingCustomFields.length === 0 && !hasSeparator) {
-                // Separator'ın kaldırılıp kaldırılmadığını kontrol et
-                const quoteId = '<?php echo $quote['quote_number']; ?>';
-                const isHidden = localStorage.getItem(`quote_custom_separator_hidden_${quoteId}`) === 'true';
-
-                if (!isHidden) {
-                // Ayırıcı başlık ve çizgi gizlendi
-                // Separator görünmeyecek
-                }
-            }
-
-            const rowHtml = `
-                <!-- Sol Kolon -->
-                <div id="leftColumn_${generalInfoRowCounter}">
-                    <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                        <span class="editable" data-field="custom_label_${generalInfoRowCounter}" data-quote-id="<?php echo $quote['quote_number']; ?>" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"
-                              onclick="editField(this)" title="Etiket düzenlemek için tıklayın" data-placeholder="Etiket:">
-                            Yeni Alan:
-                            <span class="edit-indicator"></span>
-                        </span>
-                        <span class="editable" data-field="custom_value_${generalInfoRowCounter}" data-quote-id="<?php echo $quote['quote_number']; ?>" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right;"
-                              onclick="editField(this)" title="Değer düzenlemek için tıklayın" data-placeholder="Değer eklemek için tıklayın">
-                            Değer eklemek için tıklayın
-                            <span class="edit-indicator"></span>
-                        </span>
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeGeneralInfoField('left', ${generalInfoRowCounter})" style="font-size: 11px; padding: 2px 6px;" title="Bu alanı kaldır">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Sağ Kolon -->
-                <div id="rightColumn_${generalInfoRowCounter}">
-                    <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; min-height: 24px;">
-                        <span class="editable" data-field="custom_label2_${generalInfoRowCounter}" data-quote-id="<?php echo $quote['quote_number']; ?>" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; font-weight: 600; color: #2c5aa0; font-size: 13px; white-space: nowrap;"
-                              onclick="editField(this)" title="Etiket düzenlemek için tıklayın" data-placeholder="Etiket:">
-                            Yeni Alan:
-                            <span class="edit-indicator"></span>
-                        </span>
-                        <span class="editable" data-field="custom_value2_${generalInfoRowCounter}" data-quote-id="<?php echo $quote['quote_number']; ?>" style="cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.2s; text-align: right;"
-                              onclick="editField(this)" title="Değer düzenlemek için tıklayın" data-placeholder="Değer eklemek için tıklayın">
-                            Değer eklemek için tıklayın
-                            <span class="edit-indicator"></span>
-                        </span>
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeGeneralInfoField('right', ${generalInfoRowCounter})" style="font-size: 11px; padding: 2px 6px;" title="Bu alanı kaldır">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            container.insertAdjacentHTML('beforeend', rowHtml);
-
-            // Yeni alanları otomatik olarak veritabanına kaydet
-            const quoteId = '<?php echo $quote['quote_number']; ?>';
-
-                        // Sol kolon için başlangıç değerlerini kaydet
+            // Key'leri belirle
+            const labelKey = position === 'left' ? `custom_label_${generalInfoRowCounter}` : `custom_label2_${generalInfoRowCounter}`;
+            const valueKey = position === 'left' ? `custom_value_${generalInfoRowCounter}` : `custom_value2_${generalInfoRowCounter}`;
+            
+            // Yeni field objesi
+            const newField = {
+                id: generalInfoRowCounter,
+                labelKey: labelKey,
+                valueKey: valueKey,
+                label: 'Yeni Alan:',
+                value: 'Değer girin',
+                position: position
+            };
+            
+            // DOM'a ekle
+            container.insertAdjacentHTML('beforeend', createFieldHtml(newField, quoteId));
+            
+            // Veritabanına kaydet
             Promise.all([
                 fetch('../api/update-general-info.php', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: new URLSearchParams({
                         ajax: '1',
                         action: 'update_field',
-                        field: `custom_label_${generalInfoRowCounter}`,
+                        field: labelKey,
                         value: 'Yeni Alan:',
                         quote_number: quoteId
                     })
                 }),
-
                 fetch('../api/update-general-info.php', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: new URLSearchParams({
                         ajax: '1',
                         action: 'update_field',
-                        field: `custom_value_${generalInfoRowCounter}`,
-                        value: 'Değer eklemek için tıklayın',
-                        quote_number: quoteId
-                    })
-                }),
-
-                // Sağ kolon için başlangıç değerlerini kaydet
-                fetch('../api/update-general-info.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({
-                        ajax: '1',
-                        action: 'update_field',
-                        field: `custom_label2_${generalInfoRowCounter}`,
-                        value: 'Yeni Alan:',
-                        quote_number: quoteId
-                    })
-                }),
-
-                fetch('../api/update-general-info.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({
-                        ajax: '1',
-                        action: 'update_field',
-                        field: `custom_value2_${generalInfoRowCounter}`,
-                        value: 'Değer eklemek için tıklayın',
+                        field: valueKey,
+                        value: 'Değer girin',
                         quote_number: quoteId
                     })
                 })
             ]).then(() => {
-                showAlert('Yeni satır eklendi ve kaydedildi', 'success');
+                showAlert(position === 'left' ? 'Sol kolona alan eklendi' : 'Sağ kolona alan eklendi', 'success');
             }).catch(error => {
                 console.error('Kaydetme hatası:', error);
-                showAlert('Yeni satır eklendi ancak kaydedilemedi', 'warning');
+                showAlert('Alan eklenemedi', 'error');
             });
         }
 
-        function removeGeneralInfoField(side, rowId) {
-            const column = document.getElementById(`${side}Column_${rowId}`);
-            if (column) {
-                if (confirm('Bu alanı silmek istediğinizden emin misiniz?')) {
-                    // Kolondaki field name'leri bul
-                    const editableFields = column.querySelectorAll('.editable');
-                    const fieldsToDelete = [];
-
-                    editableFields.forEach(field => {
-                        const fieldName = field.getAttribute('data-field');
-                        if (fieldName && fieldName.startsWith('custom_')) {
-                            fieldsToDelete.push(fieldName);
-                        }
-                    });
-
-                    // Database'den custom field'ları kaldır
-                    if (fieldsToDelete.length > 0) {
-                        const quoteId = '<?php echo $quote['quote_number']; ?>';
-
-                        fieldsToDelete.forEach(fieldName => {
-                            fetch('../api/update-general-info.php', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/x-www-form-urlencoded',
-                                },
-                                body: new URLSearchParams({
-                                    ajax: '1',
-                                    action: 'remove_custom_field',
-                                    field: fieldName,
-                                    quote_number: quoteId
-                                })
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (!data.success) {
-                                    console.error('Field removal failed:', data.message);
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error removing field:', error);
-                            });
-                        });
-                    }
-
-                                        // Container artık grid olduğu için sadece bu kolonu kaldır
-                    column.remove();
-
-                    showAlert('Alan silindi ve kaydedildi', 'success');
-                }
-            }
-        }
-
-        function removeGeneralInfoRow(rowId) {
-            const row = document.getElementById(`generalInfoRow_${rowId}`);
-            if (row) {
-                if (confirm('Bu satırı silmek istediğinizden emin misiniz?')) {
-                    // Satırdaki field name'leri bul
-                    const editableFields = row.querySelectorAll('.editable');
-                    const fieldsToDelete = [];
-
-                    editableFields.forEach(field => {
-                        const fieldName = field.getAttribute('data-field');
-                        if (fieldName && fieldName.startsWith('custom_')) {
-                            fieldsToDelete.push(fieldName);
-                        }
-                    });
-
-                    // Database'den custom field'ları kaldır
-                    if (fieldsToDelete.length > 0) {
-                        const quoteId = '<?php echo $quote['quote_number']; ?>';
-
-                        fieldsToDelete.forEach(fieldName => {
-                            fetch('../api/update-general-info.php', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/x-www-form-urlencoded',
-                                },
-                                body: new URLSearchParams({
-                                    ajax: '1',
-                                    action: 'remove_custom_field',
-                                    field: fieldName,
-                                    quote_number: quoteId
-                                })
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (!data.success) {
-                                    console.error('Field removal failed:', data.message);
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error removing field:', error);
-                            });
-                        });
-                    }
-
-                    row.remove();
-                    showAlert('Satır kaldırıldı', 'info');
-                }
-            }
+        // Eski fonksiyonlar (geriye uyumluluk için)
+        function addGeneralInfoRow() {
+            addCustomFieldToColumn('left');
         }
 
     </script>
